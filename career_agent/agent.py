@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import re
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 
 from career_agent.config import Config
 from career_agent.job_sources import fetch_adzuna_jobs, fetch_jobs_for_company
@@ -25,39 +27,62 @@ class CareerSearchAgent:
         profile = self.store.profile()
         companies = self.store.target_companies()
         existing_ids = self.store.existing_job_ids()
+        monthly_remaining = self.config.max_jobs_per_month - self.store.current_month_job_count()
+        run_limit = max(0, min(self.config.max_jobs_per_run, monthly_remaining))
+        if run_limit == 0:
+            return {
+                "companies_checked": len(companies),
+                "jobs_discovered": 0,
+                "new_jobs_scored": 0,
+                "shortlisted_for_stage_two": 0,
+                "monthly_remaining": 0,
+            }
 
         discovered = self._discover(companies)
         fresh_jobs = [
             job for job in discovered if job["job_id"] not in existing_ids
-        ][: self.config.max_jobs_per_run]
+        ][:run_limit]
 
         scored = []
         for job in fresh_jobs:
             fit = self.model.score_job(profile, job)
+            job["fit_score"] = fit.score
+            job["role_type"] = fit.role_type
+            job["practice_area"] = fit.practice_area
+            job["application_deadline"] = fit.application_deadline
+            job["deadline_status"] = fit.deadline_status
+            job["eligibility"] = fit.eligibility
+            job["fit_summary"] = fit.summary
+            job["risks"] = fit.risks
+            job["recommended_action"] = fit.recommended_action
+            job["tailored_pitch"] = fit.tailored_pitch
+            job["shortlisted"] = "yes" if self._is_stage_two_candidate(job) else "no"
+
+            if job["shortlisted"] == "yes" and self.docs:
+                research = self.model.deep_research(profile, job)
+                job["research_doc_url"] = self.docs.create_research_doc(
+                    research.title,
+                    research.content,
+                )
+
             job.update(
                 {
-                    "fit_score": fit.score,
-                    "role_type": fit.role_type,
-                    "practice_area": fit.practice_area,
-                    "application_deadline": fit.application_deadline,
-                    "eligibility": fit.eligibility,
-                    "firm_research": fit.firm_research,
-                    "fit_summary": fit.summary,
-                    "risks": fit.risks,
-                    "recommended_action": fit.recommended_action,
-                    "tailored_pitch": fit.tailored_pitch,
-                    "status": "recommended" if fit.score >= self.config.min_fit_score else "review",
+                    "status": "shortlisted"
+                    if job["shortlisted"] == "yes"
+                    else "review"
+                    if fit.score >= self.config.min_fit_score
+                    else "low_fit",
                 }
             )
             scored.append(job)
 
         self.store.append_jobs(scored)
-        if self.docs:
-            self.docs.append_research(scored)
         return {
             "companies_checked": len(companies),
             "jobs_discovered": len(discovered),
             "new_jobs_scored": len(scored),
+            "shortlisted_for_stage_two": sum(1 for job in scored if job.get("shortlisted") == "yes"),
+            "monthly_remaining": max(0, monthly_remaining - len(scored)),
         }
 
     def _discover(self, companies: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -89,3 +114,27 @@ class CareerSearchAgent:
                         }
                     )
         return jobs
+
+    def _is_stage_two_candidate(self, job: dict[str, str]) -> bool:
+        if int(job.get("fit_score") or 0) < self.config.stage_two_min_fit_score:
+            return False
+        if _deadline_expired(job.get("application_deadline", ""), job.get("deadline_status", "")):
+            return False
+        practice_area = (job.get("practice_area") or "").lower()
+        summary = (job.get("fit_summary") or "").lower()
+        description = (job.get("raw_description") or "").lower()
+        haystack = " ".join([practice_area, summary, description])
+        return any(area in haystack for area in self.config.shortlist_practice_areas)
+
+
+def _deadline_expired(deadline: str, status: str) -> bool:
+    if status.lower() == "expired":
+        return True
+    dates = re.findall(r"\b(\d{4}-\d{2}-\d{2})\b", deadline or "")
+    if not dates:
+        return False
+    try:
+        parsed = datetime.fromisoformat(dates[0]).replace(tzinfo=timezone.utc)
+    except ValueError:
+        return False
+    return parsed.date() < datetime.now(timezone.utc).date()
