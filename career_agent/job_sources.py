@@ -6,6 +6,7 @@ import re
 import time
 from datetime import datetime, timezone
 from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 import feedparser
 import httpx
@@ -193,6 +194,51 @@ def fetch_reed_jobs(
     return jobs
 
 
+def fetch_google_search_jobs(
+    queries: list[str],
+    sites: list[str],
+    results_per_site: int = 3,
+) -> list[dict[str, str]]:
+    api_key = os.getenv("GOOGLE_SEARCH_API_KEY")
+    search_engine_id = os.getenv("GOOGLE_SEARCH_ENGINE_ID")
+    if not api_key or not search_engine_id:
+        return []
+
+    jobs = []
+    for site in sites:
+        for query in queries:
+            response = _get_google_search_with_retries(
+                api_key=api_key,
+                search_engine_id=search_engine_id,
+                query=query,
+                site=site,
+                results_per_site=results_per_site,
+            )
+            if response is None:
+                continue
+            for item in response.json().get("items", []):
+                title = _clean(item.get("title", ""))
+                url = item.get("link", "")
+                snippet = _clean(item.get("snippet", ""))
+                company = _company_from_search_result(item, site)
+                jobs.append(
+                    {
+                        "job_id": stable_job_id(company, title, url),
+                        "title": title,
+                        "company": company,
+                        "location": "",
+                        "remote": "remote" if "remote" in (title + " " + snippet).lower() else "",
+                        "salary": "",
+                        "url": url,
+                        "date_posted": "",
+                        "found_at": datetime.now(timezone.utc).isoformat(),
+                        "source": f"google_search:{site}:{query}",
+                        "raw_description": snippet[:8000],
+                    }
+                )
+    return jobs
+
+
 def _get_adzuna_with_retries(
     country: str,
     app_id: str,
@@ -246,6 +292,37 @@ def _get_reed_with_retries(
                 "https://www.reed.co.uk/api/1.0/search",
                 params=params,
                 auth=(api_key, ""),
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {429, 500, 502, 503, 504}:
+                raise
+        except httpx.HTTPError:
+            pass
+        time.sleep(2 * (attempt + 1))
+    return None
+
+
+def _get_google_search_with_retries(
+    api_key: str,
+    search_engine_id: str,
+    query: str,
+    site: str,
+    results_per_site: int,
+) -> httpx.Response | None:
+    params = {
+        "key": api_key,
+        "cx": search_engine_id,
+        "q": f'{query} site:{site} ("deadline" OR "apply" OR "job" OR "vacancy")',
+        "num": max(1, min(results_per_site, 10)),
+    }
+    for attempt in range(3):
+        try:
+            response = httpx.get(
+                "https://www.googleapis.com/customsearch/v1",
+                params=params,
                 timeout=30,
             )
             response.raise_for_status()
@@ -336,3 +413,14 @@ def _number_or_none(value: object) -> float | None:
         return float(value)
     except (TypeError, ValueError):
         return None
+
+
+def _company_from_search_result(item: dict, fallback_site: str) -> str:
+    pagemap = item.get("pagemap") or {}
+    metatags = pagemap.get("metatags") or []
+    if metatags:
+        site_name = metatags[0].get("og:site_name") or metatags[0].get("application-name")
+        if site_name:
+            return _clean(site_name)
+    display_link = item.get("displayLink") or urlparse(item.get("link", "")).netloc
+    return _clean(display_link or fallback_site)
