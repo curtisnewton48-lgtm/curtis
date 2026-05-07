@@ -11,6 +11,7 @@ from googleapiclient.discovery import build
 SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive.file",
 ]
 
 
@@ -66,6 +67,19 @@ class SheetsStore:
         rows = self.values("Jobs!A2:A2000")
         return {row[0] for row in rows if row}
 
+    def current_month_job_count(self) -> int:
+        now = datetime.now(timezone.utc)
+        rows = self.values("Jobs!A2:Z5000")
+        count = 0
+        for row in rows:
+            if not row:
+                continue
+            updated_at = row[21] if len(row) > 21 else ""
+            found_at = row[8] if len(row) > 8 else ""
+            if _is_same_utc_month(updated_at or found_at, now):
+                count += 1
+        return count
+
     def append_jobs(self, jobs: list[dict[str, Any]]) -> None:
         if not jobs:
             return
@@ -87,11 +101,14 @@ class SheetsStore:
                 job.get("role_type", ""),
                 job.get("practice_area", ""),
                 job.get("application_deadline", ""),
+                job.get("deadline_status", ""),
                 job.get("eligibility", ""),
                 job.get("fit_summary", ""),
                 job.get("risks", ""),
                 job.get("recommended_action", ""),
                 job.get("tailored_pitch", ""),
+                job.get("shortlisted", ""),
+                job.get("research_doc_url", ""),
                 job.get("raw_description", ""),
                 now,
             ]
@@ -102,7 +119,7 @@ class SheetsStore:
             .values()
             .append(
                 spreadsheetId=self.spreadsheet_id,
-                range="Jobs!A:V",
+                range="Jobs!A:Y",
                 valueInputOption="USER_ENTERED",
                 insertDataOption="INSERT_ROWS",
                 body={"values": rows},
@@ -112,9 +129,12 @@ class SheetsStore:
 
 
 class DocsStore:
-    def __init__(self, document_id: str) -> None:
+    def __init__(self, document_id: str = "", folder_id: str = "") -> None:
         self.document_id = document_id
-        self.service = build("docs", "v1", credentials=_credentials())
+        self.folder_id = folder_id
+        credentials = _credentials()
+        self.service = build("docs", "v1", credentials=credentials)
+        self.drive_service = build("drive", "v3", credentials=credentials)
 
     def append_research(self, jobs: list[dict[str, Any]]) -> None:
         if not self.document_id or not jobs:
@@ -138,6 +158,30 @@ class DocsStore:
             },
         ).execute()
 
+    def create_research_doc(self, title: str, content: str) -> str:
+        metadata: dict[str, Any] = {
+            "name": _safe_title(title),
+            "mimeType": "application/vnd.google-apps.document",
+        }
+        if self.folder_id:
+            metadata["parents"] = [self.folder_id]
+        file = self.drive_service.files().create(body=metadata, fields="id,webViewLink").execute()
+        document_id = file["id"]
+        self.service.documents().batchUpdate(
+            documentId=document_id,
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": 1},
+                            "text": content,
+                        }
+                    }
+                ]
+            },
+        ).execute()
+        return file.get("webViewLink") or f"https://docs.google.com/document/d/{document_id}/edit"
+
 
 def _research_entry(job: dict[str, Any]) -> str:
     return (
@@ -150,3 +194,21 @@ def _research_entry(job: dict[str, Any]) -> str:
         f"Research: {job.get('firm_research', '')}\n"
         f"Fit summary: {job.get('fit_summary', '')}\n"
     )
+
+
+def _is_same_utc_month(value: str, now: datetime) -> bool:
+    if not value:
+        return False
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return False
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    parsed = parsed.astimezone(timezone.utc)
+    return parsed.year == now.year and parsed.month == now.month
+
+
+def _safe_title(title: str) -> str:
+    cleaned = "".join(char if char not in r'\/:*?"<>|' else "-" for char in title)
+    return cleaned[:180] or "Career Agent Firm Research"
