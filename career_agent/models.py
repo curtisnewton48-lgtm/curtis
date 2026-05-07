@@ -167,11 +167,11 @@ class GeminiModelClient:
 
     def score_job(self, profile: dict[str, str], job: dict[str, str]) -> JobFit:
         content = self._generate_json(STAGE_ONE_PROMPT, build_user_prompt(profile, job))
-        return JobFit.model_validate_json(content)
+        return JobFit.model_validate_json(_json_object_text(content))
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         content = self._generate_json(STAGE_TWO_PROMPT, build_user_prompt(profile, job))
-        return FirmResearch.model_validate_json(content)
+        return FirmResearch.model_validate_json(_json_object_text(content))
 
     def _generate_json(self, system_prompt: str, user_prompt: str) -> str:
         response = httpx.post(
@@ -207,3 +207,16 @@ def _extract_openai_output_text(payload: dict) -> str:
     if not parts:
         raise RuntimeError(f"No text output returned by OpenAI: {payload}")
     return "".join(parts)
+
+
+def _json_object_text(value: str) -> str:
+    text = value.strip()
+    if text.startswith("```"):
+        text = text.strip("`").strip()
+        if text.lower().startswith("json"):
+            text = text[4:].strip()
+    start = text.find("{")
+    end = text.rfind("}")
+    if start == -1 or end == -1 or end <= start:
+        return value
+    return text[start : end + 1]
