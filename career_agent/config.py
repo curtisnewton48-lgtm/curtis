@@ -56,7 +56,7 @@ def load_config() -> Config:
         max_jobs_per_run=int(os.getenv("MAX_JOBS_PER_RUN", "20")),
         max_jobs_per_month=int(os.getenv("MAX_JOBS_PER_MONTH", "300")),
         min_fit_score=int(os.getenv("MIN_FIT_SCORE", "65")),
-        stage_two_min_fit_score=int(os.getenv("STAGE_TWO_MIN_FIT_SCORE", "70")),
+        stage_two_min_fit_score=int(os.getenv("STAGE_TWO_MIN_FIT_SCORE", "50")),
         job_queries=[
             query.strip()
             for query in os.getenv(
