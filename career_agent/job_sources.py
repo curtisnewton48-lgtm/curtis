@@ -329,7 +329,11 @@ def _get_google_search_with_retries(
             return response
         except httpx.HTTPStatusError as exc:
             if exc.response.status_code not in {429, 500, 502, 503, 504}:
-                raise
+                print(
+                    "Google search source skipped "
+                    f"for {site} / {query}: HTTP {exc.response.status_code}"
+                )
+                return None
         except httpx.HTTPError:
             pass
         time.sleep(2 * (attempt + 1))
