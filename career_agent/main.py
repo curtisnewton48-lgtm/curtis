@@ -15,7 +15,8 @@ def main() -> None:
         else None
     )
     model = create_model_client(config.model_provider, config.model_name)
-    result = CareerSearchAgent(config, store, model, docs).run()
+    stage_two_model = create_model_client(config.model_provider, config.stage_two_model_name)
+    result = CareerSearchAgent(config, store, model, stage_two_model, docs).run()
     print(result)
 
 
