@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from datetime import datetime, timezone
 from typing import Any
 
@@ -70,6 +71,17 @@ class SheetsStore:
     def existing_job_ids(self) -> set[str]:
         rows = self.values("Jobs!A2:A2000")
         return {row[0] for row in rows if row}
+
+    def research_memory_by_company(self) -> dict[str, str]:
+        rows = self.values("Jobs!A2:Y5000")
+        memory: dict[str, str] = {}
+        for row in rows:
+            company = row[2] if len(row) > 2 else ""
+            research_url = row[22] if len(row) > 22 else ""
+            key = normalize_company_name(company)
+            if key and research_url and key not in memory:
+                memory[key] = research_url
+        return memory
 
     def current_month_job_count(self) -> int:
         now = datetime.now(timezone.utc)
@@ -216,3 +228,10 @@ def _is_same_utc_month(value: str, now: datetime) -> bool:
 def _safe_title(title: str) -> str:
     cleaned = "".join(char if char not in r'\/:*?"<>|' else "-" for char in title)
     return cleaned[:180] or "Career Agent Firm Research"
+
+
+def normalize_company_name(company: str) -> str:
+    text = (company or "").lower()
+    text = re.sub(r"\b(llp|ltd|limited|plc|inc|llc|law firm|solicitors|law)\b", " ", text)
+    text = re.sub(r"[^a-z0-9]+", " ", text)
+    return " ".join(text.split())
