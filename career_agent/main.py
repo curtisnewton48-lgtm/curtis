@@ -9,7 +9,11 @@ from career_agent.sheets import DocsStore, SheetsStore
 def main() -> None:
     config = load_config()
     store = SheetsStore(config.google_sheet_id)
-    docs = DocsStore(config.google_research_doc_id) if config.google_research_doc_id else None
+    docs = (
+        DocsStore(config.google_research_doc_id, config.google_research_folder_id)
+        if config.google_research_doc_id or config.google_research_folder_id
+        else None
+    )
     model = create_model_client(config.model_provider, config.model_name)
     result = CareerSearchAgent(config, store, model, docs).run()
     print(result)
