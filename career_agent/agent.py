@@ -16,11 +16,13 @@ class CareerSearchAgent:
         config: Config,
         store: SheetsStore,
         model: ModelClient,
+        stage_two_model: ModelClient | None = None,
         docs: DocsStore | None = None,
     ) -> None:
         self.config = config
         self.store = store
         self.model = model
+        self.stage_two_model = stage_two_model or model
         self.docs = docs
 
     def run(self) -> dict[str, int]:
@@ -59,7 +61,7 @@ class CareerSearchAgent:
             job["shortlisted"] = "yes" if self._is_stage_two_candidate(job) else "no"
 
             if job["shortlisted"] == "yes" and self.docs:
-                research = self.model.deep_research(profile, job)
+                research = self.stage_two_model.deep_research(profile, job)
                 job["research_doc_url"] = self.docs.create_research_doc(
                     research.title,
                     research.content,
