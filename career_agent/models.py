@@ -215,6 +215,16 @@ def _json_object_text(value: str) -> str:
         text = text.strip("`").strip()
         if text.lower().startswith("json"):
             text = text[4:].strip()
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(text):
+        if char != "{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(text[index:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return json.dumps(parsed, ensure_ascii=True)
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end <= start:
