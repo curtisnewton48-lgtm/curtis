@@ -1,6 +1,6 @@
 # Career Search Agent
 
-A scheduled cloud agent that runs from GitHub Actions every morning at 09:00 GMT. Stage 1 uses Gemini 3 Flash and Adzuna to find UK legal-sector opportunities, extract deadlines and requirements, and write them to Google Sheets. Shortlisted jobs then move to Stage 2, which creates one comprehensive Google Doc research file per firm/job.
+A scheduled cloud agent that runs from GitHub Actions every morning at 09:00 GMT. Stage 1 uses Gemini 3 Flash plus multiple job sources to find UK legal-sector opportunities, extract deadlines and requirements, and write them to Google Sheets. Shortlisted jobs then move to Stage 2, which creates one comprehensive Google Doc research file per firm/job.
 
 Tracker created in your Google Drive:
 
@@ -13,13 +13,13 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 ## What It Does
 
 - Reads `Profile`, `TargetCompanies`, and `Settings` tabs from Google Sheets.
-- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna.
+- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna and Reed.
 - Pulls additional postings from configurable RSS feeds and career-page URLs.
 - Deduplicates jobs by URL/title/company.
 - Uses Gemini 3 Flash to extract role title, location, salary, deadline, requirements, eligibility, practice area, and first-pass fit score.
 - Writes application-tracking fields to the `Jobs` tab.
 - Shortlists active jobs in target practice areas.
-- Uses Gemini 3.1 Pro for one comprehensive Google Doc per shortlisted firm/job.
+- Creates one comprehensive Google Doc per shortlisted firm/job for Stage 2 deep research.
 - Leaves applications and outbound messages under human approval.
 
 ## Limits
@@ -34,9 +34,10 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 
 1. Create a Gemini API key and set `GEMINI_API_KEY`.
 2. Create Adzuna API credentials at https://developer.adzuna.com/ and set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
-3. Create Google service account credentials with access to the tracker Sheet and your research Drive folder.
-4. Share the Google Sheet and research folder with the service account email.
-5. Add the GitHub repository secrets listed below.
+3. Create a Reed Jobseeker API key at https://www.reed.co.uk/developers/jobseeker and set `REED_API_KEY`.
+4. Create Google service account credentials with access to the tracker Sheet and your research Drive folder.
+5. Share the Google Sheet and research folder with the service account email.
+6. Add the GitHub repository secrets listed below.
 
 ## GitHub Deployment
 
@@ -49,10 +50,10 @@ Add these GitHub repository secrets:
 - `GOOGLE_RESEARCH_FOLDER_ID`
 - `MODEL_PROVIDER`
 - `MODEL_NAME`
-- `STAGE_TWO_MODEL_NAME`
 - `GEMINI_API_KEY`
 - `ADZUNA_APP_ID`
 - `ADZUNA_APP_KEY`
+- `REED_API_KEY`
 
 Recommended defaults:
 
@@ -65,6 +66,8 @@ MAX_JOBS_PER_RUN=20
 MAX_JOBS_PER_MONTH=300
 STAGE_TWO_MIN_FIT_SCORE=70
 ADZUNA_RESULTS_PER_QUERY=20
+REED_RESULTS_PER_QUERY=20
+REED_LOCATION=United Kingdom
 ```
 
 ## Shortlist Areas
