@@ -25,6 +25,8 @@ class Config:
     adzuna_results_per_query: int
     reed_location: str
     reed_results_per_query: int
+    google_search_sites: list[str]
+    google_search_results_per_site: int
 
 
 def load_config() -> Config:
@@ -74,4 +76,13 @@ def load_config() -> Config:
         adzuna_results_per_query=int(os.getenv("ADZUNA_RESULTS_PER_QUERY", "25")),
         reed_location=os.getenv("REED_LOCATION", "United Kingdom").strip(),
         reed_results_per_query=int(os.getenv("REED_RESULTS_PER_QUERY", "20")),
+        google_search_sites=[
+            site.strip()
+            for site in os.getenv(
+                "GOOGLE_SEARCH_SITES",
+                "legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com",
+            ).split(",")
+            if site.strip()
+        ],
+        google_search_results_per_site=int(os.getenv("GOOGLE_SEARCH_RESULTS_PER_SITE", "3")),
     )
