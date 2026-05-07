@@ -5,14 +5,21 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from career_agent.config import Config
 from career_agent.job_sources import fetch_adzuna_jobs, fetch_jobs_for_company
 from career_agent.models import ModelClient
-from career_agent.sheets import SheetsStore
+from career_agent.sheets import DocsStore, SheetsStore
 
 
 class CareerSearchAgent:
-    def __init__(self, config: Config, store: SheetsStore, model: ModelClient) -> None:
+    def __init__(
+        self,
+        config: Config,
+        store: SheetsStore,
+        model: ModelClient,
+        docs: DocsStore | None = None,
+    ) -> None:
         self.config = config
         self.store = store
         self.model = model
+        self.docs = docs
 
     def run(self) -> dict[str, int]:
         profile = self.store.profile()
@@ -32,6 +39,8 @@ class CareerSearchAgent:
                     "fit_score": fit.score,
                     "role_type": fit.role_type,
                     "practice_area": fit.practice_area,
+                    "application_deadline": fit.application_deadline,
+                    "eligibility": fit.eligibility,
                     "firm_research": fit.firm_research,
                     "fit_summary": fit.summary,
                     "risks": fit.risks,
@@ -43,6 +52,8 @@ class CareerSearchAgent:
             scored.append(job)
 
         self.store.append_jobs(scored)
+        if self.docs:
+            self.docs.append_research(scored)
         return {
             "companies_checked": len(companies),
             "jobs_discovered": len(discovered),
