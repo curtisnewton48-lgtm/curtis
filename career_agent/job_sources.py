@@ -150,6 +150,49 @@ def fetch_adzuna_jobs(
     return jobs
 
 
+def fetch_reed_jobs(
+    queries: list[str],
+    location: str = "United Kingdom",
+    results_per_query: int = 20,
+) -> list[dict[str, str]]:
+    api_key = os.getenv("REED_API_KEY")
+    if not api_key:
+        return []
+
+    jobs = []
+    for query in queries:
+        response = _get_reed_with_retries(
+            api_key=api_key,
+            query=query,
+            location=location,
+            results_per_query=results_per_query,
+        )
+        if response is None:
+            continue
+        for item in response.json().get("results", []):
+            company = item.get("employerName", "")
+            title = item.get("jobTitle", "")
+            url = item.get("jobUrl", "")
+            location_name = item.get("locationName", "")
+            description = _clean(item.get("jobDescription", ""))
+            jobs.append(
+                {
+                    "job_id": stable_job_id(company, title, url),
+                    "title": title,
+                    "company": company,
+                    "location": location_name,
+                    "remote": "remote" if "remote" in (title + " " + description).lower() else "",
+                    "salary": _reed_salary_text(item),
+                    "url": url,
+                    "date_posted": item.get("date", ""),
+                    "found_at": datetime.now(timezone.utc).isoformat(),
+                    "source": f"reed:{query}",
+                    "raw_description": description[:8000],
+                }
+            )
+    return jobs
+
+
 def _get_adzuna_with_retries(
     country: str,
     app_id: str,
@@ -185,9 +228,56 @@ def _get_adzuna_with_retries(
     return None
 
 
+def _get_reed_with_retries(
+    api_key: str,
+    query: str,
+    location: str,
+    results_per_query: int,
+) -> httpx.Response | None:
+    params = {
+        "keywords": query,
+        "locationName": location,
+        "resultsToTake": min(results_per_query, 100),
+        "postedByDirectEmployer": "false",
+    }
+    for attempt in range(3):
+        try:
+            response = httpx.get(
+                "https://www.reed.co.uk/api/1.0/search",
+                params=params,
+                auth=(api_key, ""),
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {429, 500, 502, 503, 504}:
+                raise
+        except httpx.HTTPError:
+            pass
+        time.sleep(2 * (attempt + 1))
+    return None
+
+
 def _looks_like_job(text: str) -> bool:
     lowered = text.lower()
     job_terms = [
+        "paralegal",
+        "solicitor",
+        "trainee solicitor",
+        "caseworker",
+        "legal",
+        "law",
+        "training contract",
+        "sqe",
+        "vacation scheme",
+        "graduate",
+        "associate",
+        "immigration",
+        "housing",
+        "employment",
+        "private client",
+        "wills",
         "engineer",
         "manager",
         "designer",
@@ -202,11 +292,6 @@ def _looks_like_job(text: str) -> bool:
         "marketing",
         "operations",
         "remote",
-        "paralegal",
-        "solicitor",
-        "caseworker",
-        "legal assistant",
-        "law",
     ]
     return any(term in lowered for term in job_terms)
 
@@ -229,3 +314,25 @@ def _salary_text(item: dict) -> str:
     if salary_max:
         return f"Up to GBP {salary_max:,.0f}"
     return ""
+
+
+def _reed_salary_text(item: dict) -> str:
+    salary_min = _number_or_none(item.get("minimumSalary"))
+    salary_max = _number_or_none(item.get("maximumSalary"))
+    currency = item.get("currency") or "GBP"
+    if salary_min and salary_max:
+        return f"{currency} {salary_min:,.0f} - {salary_max:,.0f}"
+    if salary_min:
+        return f"{currency} {salary_min:,.0f}+"
+    if salary_max:
+        return f"Up to {currency} {salary_max:,.0f}"
+    return ""
+
+
+def _number_or_none(value: object) -> float | None:
+    if value in {None, ""}:
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
