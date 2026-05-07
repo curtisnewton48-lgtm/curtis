@@ -20,6 +20,7 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 - Uses Gemini 3 Flash to extract role title, location, salary, deadline, requirements, eligibility, practice area, and first-pass fit score.
 - Writes application-tracking fields to the `Jobs` tab.
 - Shortlists active jobs in target practice areas.
+- Reuses existing firm research docs when a later shortlisted job is from the same firm.
 - Creates one comprehensive Google Doc per shortlisted firm/job for Stage 2 deep research.
 - Leaves applications and outbound messages under human approval.
 
@@ -129,6 +130,8 @@ Each shortlisted job gets an individual Google Doc covering:
 - expectations of candidates
 - use of AI and technology
 - reviews
+
+If the tracker already contains a research document for the same firm, the agent reuses that document link instead of spending Stage 2 tokens on duplicate firm research. The row's `Risks` field notes when firm memory was reused.
 
 ## Sheet Setup
 
