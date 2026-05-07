@@ -13,7 +13,8 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 ## What It Does
 
 - Reads `Profile`, `TargetCompanies`, and `Settings` tabs from Google Sheets.
-- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna and Reed.
+- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna, Reed, and Google Programmable Search.
+- Looks across legal-specific sources such as Legal Cheek, LawCareers.Net, Law Gazette Jobs, TotallyLegal, jobs.ac.uk, charity legal roles, Civil Service Jobs, and Indeed search results.
 - Pulls additional postings from configurable RSS feeds and career-page URLs.
 - Deduplicates jobs by URL/title/company.
 - Uses Gemini 3 Flash to extract role title, location, salary, deadline, requirements, eligibility, practice area, and first-pass fit score.
@@ -35,9 +36,10 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 1. Create a Gemini API key and set `GEMINI_API_KEY`.
 2. Create Adzuna API credentials at https://developer.adzuna.com/ and set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
 3. Create a Reed Jobseeker API key at https://www.reed.co.uk/developers/jobseeker and set `REED_API_KEY`.
-4. Create Google service account credentials with access to the tracker Sheet and your research Drive folder.
-5. Share the Google Sheet and research folder with the service account email.
-6. Add the GitHub repository secrets listed below.
+4. Optional but recommended for broad coverage: create a Google Programmable Search engine and set `GOOGLE_SEARCH_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID`.
+5. Create Google service account credentials with access to the tracker Sheet and your research Drive folder.
+6. Share the Google Sheet and research folder with the service account email.
+7. Add the GitHub repository secrets listed below.
 
 ## GitHub Deployment
 
@@ -54,6 +56,8 @@ Add these GitHub repository secrets:
 - `ADZUNA_APP_ID`
 - `ADZUNA_APP_KEY`
 - `REED_API_KEY`
+- `GOOGLE_SEARCH_API_KEY`
+- `GOOGLE_SEARCH_ENGINE_ID`
 
 Recommended defaults:
 
@@ -68,6 +72,8 @@ STAGE_TWO_MIN_FIT_SCORE=70
 ADZUNA_RESULTS_PER_QUERY=20
 REED_RESULTS_PER_QUERY=20
 REED_LOCATION=United Kingdom
+GOOGLE_SEARCH_RESULTS_PER_SITE=3
+GOOGLE_SEARCH_SITES=legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com
 ```
 
 ## Shortlist Areas
