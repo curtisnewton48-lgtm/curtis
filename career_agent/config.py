@@ -23,6 +23,8 @@ class Config:
     adzuna_country: str
     adzuna_where: str
     adzuna_results_per_query: int
+    reed_location: str
+    reed_results_per_query: int
 
 
 def load_config() -> Config:
@@ -69,5 +71,7 @@ def load_config() -> Config:
         ],
         adzuna_country=os.getenv("ADZUNA_COUNTRY", "gb").strip().lower(),
         adzuna_where=os.getenv("ADZUNA_WHERE", "United Kingdom").strip(),
-        adzuna_results_per_query=int(os.getenv("ADZUNA_RESULTS_PER_QUERY", "20")),
+        adzuna_results_per_query=int(os.getenv("ADZUNA_RESULTS_PER_QUERY", "25")),
+        reed_location=os.getenv("REED_LOCATION", "United Kingdom").strip(),
+        reed_results_per_query=int(os.getenv("REED_RESULTS_PER_QUERY", "20")),
     )
