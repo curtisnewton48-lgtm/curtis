@@ -36,8 +36,27 @@ class FirmResearch(BaseModel):
     content: str
 
 
+class JobVerification(BaseModel):
+    is_real_job: bool
+    deadline_correct: bool
+    location_correct: bool
+    salary_experience_accurate: bool
+    firm_exists: bool
+    job_still_open: bool
+    accept_for_stage_two: bool
+    confidence: int = Field(ge=0, le=100)
+    corrected_deadline: str = "not stated"
+    corrected_location: str = "not stated"
+    corrected_salary_or_experience: str = "not stated"
+    evidence: str
+    risks: str
+
+
 class ModelClient(Protocol):
     def score_job(self, profile: dict[str, str], job: dict[str, str]) -> JobFit:
+        ...
+
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> JobVerification:
         ...
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
@@ -62,6 +81,20 @@ Create comprehensive firm research for a shortlisted legal job. Use only supplie
 The note should be good enough that a strong 2026 legal applicant can use it without further routine research.
 Cover at minimum: legal areas advised on, office locations, culture and why to work there, NQ retention rate, NQ and trainee salary, application process, type of firm, clients/deals/news, recent news, firm structure, training contract/SQE/seats structure, expectations of candidates, use of AI/technology, and reviews.
 Return only valid JSON with keys: title, content."""
+
+VERIFICATION_PROMPT = """You are a cheap verification micro-agent for a UK legal career-search system.
+Before expensive Stage 2 research runs, verify whether the shortlisted role appears real, current, and accurately represented.
+Use the supplied job title, company, URL, source, description, deadline, salary, location, and extracted facts. Be strict but fair.
+Check:
+- Is the job a real vacancy or application page, not an advice article, index page, advert, or stale search result?
+- Is the application deadline correct or at least not contradicted by the source text?
+- Is the location correct or at least not contradicted by the source text?
+- Is the salary/experience information accurate or at least not contradicted by the source text?
+- Does the firm or organisation actually exist based on the supplied context?
+- Is the job still open, or is there strong evidence it has closed/expired?
+Set accept_for_stage_two to false if the role is likely fake, closed, an article, a non-vacancy page, has a clearly expired deadline, or has a major factual contradiction.
+When the evidence is incomplete but not contradicted, keep the relevant correctness field true and explain uncertainty in risks.
+Return only valid JSON with keys: is_real_job, deadline_correct, location_correct, salary_experience_accurate, firm_exists, job_still_open, accept_for_stage_two, confidence, corrected_deadline, corrected_location, corrected_salary_or_experience, evidence, risks."""
 
 
 def build_user_prompt(profile: dict[str, str], job: dict[str, str]) -> str:
@@ -105,6 +138,25 @@ class OpenAIModelClient:
         payload = response.json()
         output_text = payload.get("output_text") or _extract_openai_output_text(payload)
         return JobFit.model_validate_json(output_text)
+
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> JobVerification:
+        response = httpx.post(
+            "https://api.openai.com/v1/responses",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "input": [
+                    {"role": "system", "content": VERIFICATION_PROMPT},
+                    {"role": "user", "content": build_user_prompt(profile, job)},
+                ],
+                "text": {"format": {"type": "json_object"}},
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        output_text = payload.get("output_text") or _extract_openai_output_text(payload)
+        return JobVerification.model_validate_json(output_text)
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         response = httpx.post(
@@ -153,6 +205,26 @@ class MistralModelClient:
             content = json.dumps(content, ensure_ascii=True)
         return JobFit.model_validate_json(content)
 
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> JobVerification:
+        response = httpx.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": VERIFICATION_PROMPT},
+                    {"role": "user", "content": build_user_prompt(profile, job)},
+                ],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=60,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        if not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=True)
+        return JobVerification.model_validate_json(content)
+
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         response = httpx.post(
             "https://api.mistral.ai/v1/chat/completions",
@@ -184,6 +256,10 @@ class GeminiModelClient:
     def score_job(self, profile: dict[str, str], job: dict[str, str]) -> JobFit:
         content = self._generate_json(STAGE_ONE_PROMPT, build_user_prompt(profile, job))
         return JobFit.model_validate_json(_json_object_text(content))
+
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> JobVerification:
+        content = self._generate_json(VERIFICATION_PROMPT, build_user_prompt(profile, job))
+        return JobVerification.model_validate_json(_json_object_text(content))
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         content = self._generate_json(STAGE_TWO_PROMPT, build_user_prompt(profile, job))
