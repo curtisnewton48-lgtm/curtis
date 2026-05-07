@@ -33,11 +33,14 @@ jobs:
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          REED_API_KEY: ${{ secrets.REED_API_KEY }}
           ADZUNA_COUNTRY: ${{ vars.ADZUNA_COUNTRY || 'gb' }}
           ADZUNA_WHERE: ${{ vars.ADZUNA_WHERE || 'United Kingdom' }}
+          REED_LOCATION: ${{ vars.REED_LOCATION || 'United Kingdom' }}
           JOB_QUERIES: ${{ vars.JOB_QUERIES || 'paralegal, trainee solicitor, legal caseworker, immigration caseworker, housing caseworker' }}
           SHORTLIST_PRACTICE_AREAS: ${{ vars.SHORTLIST_PRACTICE_AREAS || 'private client, wills, employment, antitrust, competition law, human rights, eu law, immigration law, real estate, housing, international law' }}
           ADZUNA_RESULTS_PER_QUERY: ${{ vars.ADZUNA_RESULTS_PER_QUERY || '20' }}
+          REED_RESULTS_PER_QUERY: ${{ vars.REED_RESULTS_PER_QUERY || '20' }}
           MAX_JOBS_PER_RUN: ${{ vars.MAX_JOBS_PER_RUN || '20' }}
           MAX_JOBS_PER_MONTH: ${{ vars.MAX_JOBS_PER_MONTH || '300' }}
           MIN_FIT_SCORE: ${{ vars.MIN_FIT_SCORE || '65' }}
