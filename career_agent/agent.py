@@ -3,7 +3,7 @@ from __future__ import annotations
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from career_agent.config import Config
-from career_agent.job_sources import fetch_jobs_for_company
+from career_agent.job_sources import fetch_adzuna_jobs, fetch_jobs_for_company
 from career_agent.models import ModelClient
 from career_agent.sheets import SheetsStore
 
@@ -30,6 +30,9 @@ class CareerSearchAgent:
             job.update(
                 {
                     "fit_score": fit.score,
+                    "role_type": fit.role_type,
+                    "practice_area": fit.practice_area,
+                    "firm_research": fit.firm_research,
                     "fit_summary": fit.summary,
                     "risks": fit.risks,
                     "recommended_action": fit.recommended_action,
@@ -47,7 +50,12 @@ class CareerSearchAgent:
         }
 
     def _discover(self, companies: list[dict[str, str]]) -> list[dict[str, str]]:
-        jobs = []
+        jobs = fetch_adzuna_jobs(
+            queries=self.config.job_queries,
+            country=self.config.adzuna_country,
+            where=self.config.adzuna_where,
+            results_per_query=self.config.adzuna_results_per_query,
+        )
         with ThreadPoolExecutor(max_workers=6) as executor:
             futures = [executor.submit(fetch_jobs_for_company, company) for company in companies]
             for future in as_completed(futures):
