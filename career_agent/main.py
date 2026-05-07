@@ -16,7 +16,11 @@ def main() -> None:
     )
     model = create_model_client(config.model_provider, config.model_name)
     stage_two_model = create_model_client(config.model_provider, config.stage_two_model_name)
-    result = CareerSearchAgent(config, store, model, stage_two_model, docs).run()
+    verification_model = create_model_client(
+        config.verification_model_provider,
+        config.verification_model_name,
+    )
+    result = CareerSearchAgent(config, store, model, stage_two_model, docs, verification_model).run()
     print(result)
 
 
