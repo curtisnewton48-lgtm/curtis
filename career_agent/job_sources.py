@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import re
 from datetime import datetime, timezone
 from urllib.parse import urljoin
@@ -100,6 +101,58 @@ def fetch_jobs_for_company(company_config: dict[str, str]) -> list[dict[str, str
     return fetch_career_page_jobs(company, url, keywords)
 
 
+def fetch_adzuna_jobs(
+    queries: list[str],
+    country: str = "gb",
+    where: str = "United Kingdom",
+    results_per_query: int = 25,
+) -> list[dict[str, str]]:
+    app_id = os.getenv("ADZUNA_APP_ID")
+    app_key = os.getenv("ADZUNA_APP_KEY")
+    if not app_id or not app_key:
+        return []
+
+    jobs = []
+    for query in queries:
+        response = httpx.get(
+            f"https://api.adzuna.com/v1/api/jobs/{country}/search/1",
+            params={
+                "app_id": app_id,
+                "app_key": app_key,
+                "what": query,
+                "where": where,
+                "results_per_page": results_per_query,
+                "sort_by": "date",
+                "content-type": "application/json",
+            },
+            timeout=30,
+        )
+        response.raise_for_status()
+        for item in response.json().get("results", []):
+            company = item.get("company", {}).get("display_name", "")
+            title = item.get("title", "")
+            url = item.get("redirect_url", "")
+            location = item.get("location", {}).get("display_name", "")
+            salary = _salary_text(item)
+            description = _clean(item.get("description", ""))
+            jobs.append(
+                {
+                    "job_id": stable_job_id(company, title, url),
+                    "title": title,
+                    "company": company,
+                    "location": location,
+                    "remote": "remote" if "remote" in (title + " " + description).lower() else "",
+                    "salary": salary,
+                    "url": url,
+                    "date_posted": item.get("created", ""),
+                    "found_at": datetime.now(timezone.utc).isoformat(),
+                    "source": f"adzuna:{query}",
+                    "raw_description": description[:8000],
+                }
+            )
+    return jobs
+
+
 def _looks_like_job(text: str) -> bool:
     lowered = text.lower()
     job_terms = [
@@ -117,6 +170,11 @@ def _looks_like_job(text: str) -> bool:
         "marketing",
         "operations",
         "remote",
+        "paralegal",
+        "solicitor",
+        "caseworker",
+        "legal assistant",
+        "law",
     ]
     return any(term in lowered for term in job_terms)
 
@@ -127,3 +185,15 @@ def _matches_keywords(text: str, keywords: str) -> bool:
         return True
     lowered = text.lower()
     return any(keyword in lowered for keyword in wanted)
+
+
+def _salary_text(item: dict) -> str:
+    salary_min = item.get("salary_min")
+    salary_max = item.get("salary_max")
+    if salary_min and salary_max:
+        return f"GBP {salary_min:,.0f} - {salary_max:,.0f}"
+    if salary_min:
+        return f"GBP {salary_min:,.0f}+"
+    if salary_max:
+        return f"Up to GBP {salary_max:,.0f}"
+    return ""
