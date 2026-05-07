@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from career_agent.config import Config
-from career_agent.job_sources import fetch_adzuna_jobs, fetch_jobs_for_company
+from career_agent.job_sources import fetch_adzuna_jobs, fetch_jobs_for_company, fetch_reed_jobs
 from career_agent.models import ModelClient
 from career_agent.sheets import DocsStore, SheetsStore
 
@@ -93,6 +93,13 @@ class CareerSearchAgent:
             country=self.config.adzuna_country,
             where=self.config.adzuna_where,
             results_per_query=self.config.adzuna_results_per_query,
+        )
+        jobs.extend(
+            fetch_reed_jobs(
+                queries=self.config.job_queries,
+                location=self.config.reed_location,
+                results_per_query=self.config.reed_results_per_query,
+            )
         )
         with ThreadPoolExecutor(max_workers=6) as executor:
             futures = [executor.submit(fetch_jobs_for_company, company) for company in companies]
