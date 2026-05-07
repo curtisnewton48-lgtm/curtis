@@ -25,6 +25,7 @@ jobs:
           GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
           GOOGLE_RESEARCH_DOC_ID: ${{ secrets.GOOGLE_RESEARCH_DOC_ID }}
           GOOGLE_RESEARCH_FOLDER_ID: ${{ secrets.GOOGLE_RESEARCH_FOLDER_ID }}
+          PROFILE_CONTEXT: ${{ secrets.PROFILE_CONTEXT }}
           MODEL_PROVIDER: ${{ secrets.MODEL_PROVIDER }}
           MODEL_NAME: ${{ secrets.MODEL_NAME }}
           STAGE_TWO_MODEL_NAME: ${{ secrets.STAGE_TWO_MODEL_NAME }}
