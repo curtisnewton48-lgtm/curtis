@@ -29,6 +29,8 @@ jobs:
           MODEL_PROVIDER: ${{ secrets.MODEL_PROVIDER }}
           MODEL_NAME: ${{ secrets.MODEL_NAME }}
           STAGE_TWO_MODEL_NAME: ${{ secrets.STAGE_TWO_MODEL_NAME }}
+          VERIFICATION_MODEL_PROVIDER: ${{ secrets.VERIFICATION_MODEL_PROVIDER || 'mistral' }}
+          VERIFICATION_MODEL_NAME: ${{ secrets.VERIFICATION_MODEL_NAME || 'open-mistral-7b' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
