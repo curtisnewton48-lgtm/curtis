@@ -52,6 +52,23 @@ class FakeModel:
             tailored_pitch="Client-facing casework experience.",
         )
 
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
+        return SimpleNamespace(
+            is_real_job=True,
+            deadline_correct=True,
+            location_correct=True,
+            salary_experience_accurate=True,
+            firm_exists=True,
+            job_still_open=True,
+            accept_for_stage_two=True,
+            confidence=90,
+            corrected_deadline="not stated",
+            corrected_location="not stated",
+            corrected_salary_or_experience="not stated",
+            evidence="Test role appears active.",
+            risks="No verification risks found.",
+        )
+
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
         raise AssertionError("Deep research should not run when firm memory exists.")
 
