@@ -5,7 +5,7 @@ from career_agent.agent import CareerSearchAgent
 
 def _agent() -> CareerSearchAgent:
     config = SimpleNamespace(
-        stage_two_min_fit_score=80,
+        stage_two_min_fit_score=50,
         shortlist_practice_areas=["immigration law", "housing", "employment"],
     )
     return CareerSearchAgent(config, store=None, model=None)
@@ -13,7 +13,7 @@ def _agent() -> CareerSearchAgent:
 
 def _job(**overrides: str) -> dict[str, str]:
     job = {
-        "fit_score": "86",
+        "fit_score": "50",
         "application_deadline": "not stated",
         "deadline_status": "unclear",
         "eligibility_status": "probably_eligible",
