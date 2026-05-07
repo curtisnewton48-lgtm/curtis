@@ -57,11 +57,17 @@ class CareerSearchAgent:
             job["practice_area"] = fit.practice_area
             job["application_deadline"] = fit.application_deadline
             job["deadline_status"] = fit.deadline_status
-            job["eligibility"] = fit.eligibility
+            job["eligibility"] = _eligibility_note(fit)
             job["fit_summary"] = fit.summary
-            job["risks"] = fit.risks
+            job["risks"] = _risk_note(fit)
             job["recommended_action"] = fit.recommended_action
             job["tailored_pitch"] = fit.tailored_pitch
+            job["eligibility_status"] = fit.eligibility_status
+            job["role_level"] = fit.role_level
+            job["practice_area_match"] = fit.practice_area_match
+            job["candidate_evidence_match"] = fit.candidate_evidence_match
+            job["explicit_disqualifiers"] = fit.explicit_disqualifiers
+            job["stage_two_reason"] = fit.stage_two_reason
             job["shortlisted"] = "yes" if self._is_stage_two_candidate(job) else "no"
 
             if job["shortlisted"] == "yes" and self.docs:
@@ -152,11 +158,66 @@ class CareerSearchAgent:
             return False
         if _deadline_expired(job.get("application_deadline", ""), job.get("deadline_status", "")):
             return False
+        if _normalise_label(job.get("eligibility_status", "")) == "not_eligible":
+            return False
+        if _has_explicit_disqualifier(job.get("explicit_disqualifiers", "")):
+            return False
+        if _normalise_label(job.get("role_level", "")) not in _STAGE_TWO_ROLE_LEVELS:
+            return False
+        if _normalise_label(job.get("practice_area_match", "")) not in {"exact", "related"}:
+            return False
+        if _normalise_label(job.get("candidate_evidence_match", "")) not in {"strong", "medium"}:
+            return False
         practice_area = (job.get("practice_area") or "").lower()
         summary = (job.get("fit_summary") or "").lower()
         description = (job.get("raw_description") or "").lower()
         haystack = " ".join([practice_area, summary, description])
         return any(area in haystack for area in self.config.shortlist_practice_areas)
+
+
+_STAGE_TWO_ROLE_LEVELS = {
+    "paralegal",
+    "legal_assistant",
+    "trainee_solicitor",
+    "caseworker",
+    "vacation_scheme",
+    "training_contract",
+    "graduate_scheme",
+    "unclear",
+}
+
+
+def _eligibility_note(fit: object) -> str:
+    parts = [
+        getattr(fit, "eligibility", ""),
+        f"Eligibility status: {getattr(fit, 'eligibility_status', 'unclear')}",
+        f"Role level: {getattr(fit, 'role_level', 'unclear')}",
+        f"Degree requirement: {getattr(fit, 'degree_requirement', 'not stated')}",
+        f"SQE/LPC requirement: {getattr(fit, 'sqe_lpc_requirement', 'not stated')}",
+        f"Work authorisation: {getattr(fit, 'work_authorisation', 'not stated')}",
+        f"Application route: {getattr(fit, 'application_route', 'not stated')}",
+    ]
+    return " | ".join(part for part in parts if str(part).strip())
+
+
+def _risk_note(fit: object) -> str:
+    parts = [
+        getattr(fit, "risks", ""),
+        f"Practice area match: {getattr(fit, 'practice_area_match', 'unclear')}",
+        f"Candidate evidence match: {getattr(fit, 'candidate_evidence_match', 'unclear')}",
+        f"Explicit disqualifiers: {getattr(fit, 'explicit_disqualifiers', 'none found')}",
+        f"Stage 2 reason: {getattr(fit, 'stage_two_reason', '')}",
+    ]
+    return " | ".join(part for part in parts if str(part).strip())
+
+
+def _normalise_label(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "_", (value or "").strip().lower()).strip("_") or "unclear"
+
+
+def _has_explicit_disqualifier(value: str) -> bool:
+    lowered = (value or "").strip().lower()
+    return bool(lowered and lowered not in {"none", "none found", "not stated", "n/a", "no", "unclear"})
 
 
 def _deadline_expired(deadline: str, status: str) -> bool:
