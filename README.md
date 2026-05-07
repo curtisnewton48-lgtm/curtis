@@ -1,6 +1,6 @@
 # Career Search Agent
 
-A scheduled AI agent that reads your career profile from Google Sheets, finds job opportunities from configured sources, scores them against your preferences, and writes ranked recommendations back to your tracker.
+A scheduled AI agent that reads your career profile from Google Sheets, finds UK legal-sector opportunities, researches each firm from the available posting context, scores roles against your preferences, and writes ranked recommendations back to your tracker.
 
 Tracker created in your Google Drive:
 
@@ -9,9 +9,10 @@ https://docs.google.com/spreadsheets/d/1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsm
 ## What It Does
 
 - Reads `Profile`, `TargetCompanies`, and `Settings` tabs from Google Sheets.
-- Pulls job postings from configurable RSS feeds and career-page URLs.
+- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna.
+- Pulls additional postings from configurable RSS feeds and career-page URLs.
 - Deduplicates jobs by URL/title/company.
-- Uses OpenAI or Mistral to score each job.
+- Uses OpenAI or Mistral to score each job and create a firm research note.
 - Writes results to the `Jobs` tab.
 - Leaves applications and outbound messages under human approval.
 
@@ -20,10 +21,11 @@ https://docs.google.com/spreadsheets/d/1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsm
 1. Create API credentials:
    - OpenAI: set `OPENAI_API_KEY`, or
    - Mistral: set `MISTRAL_API_KEY`.
-2. Create Google service account credentials with access to the tracker Sheet.
-3. Share the Google Sheet with the service account email.
-4. Copy `.env.example` to `.env` and fill in the values.
-5. Install dependencies:
+2. Create Adzuna API credentials at https://developer.adzuna.com/ and set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
+3. Create Google service account credentials with access to the tracker Sheet.
+4. Share the Google Sheet with the service account email.
+5. Copy `.env.example` to `.env` and fill in the values.
+6. Install dependencies:
 
 ```bash
 python -m venv .venv
@@ -39,7 +41,7 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
-6. Run once:
+7. Run once:
 
 ```bash
 python -m career_agent.main
@@ -57,6 +59,8 @@ Add these GitHub repository secrets:
 - `MODEL_NAME`
 - `OPENAI_API_KEY` if using OpenAI
 - `MISTRAL_API_KEY` if using Mistral
+- `ADZUNA_APP_ID`
+- `ADZUNA_APP_KEY`
 
 Recommended default:
 
@@ -77,10 +81,10 @@ MODEL_NAME=mistral-medium-3.5
 Fill in:
 
 - `Profile`: your resume text, target roles, locations, salary, dealbreakers.
-- `TargetCompanies`: company name and careers URL.
+- `TargetCompanies`: optional firm names and careers URLs for extra direct-source checks.
 - `Settings`: model provider, model name, max jobs per run.
 
-The agent writes to `Jobs`. You manually move serious opportunities into `Applications` when you apply.
+The agent writes to `Jobs`, including firm research, practice-area clues, role type, fit score, risks, and tailored pitch. You manually move serious opportunities into `Applications` when you apply.
 
 ## Safety
 
