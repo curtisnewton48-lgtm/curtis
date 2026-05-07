@@ -8,7 +8,10 @@ from typing import Any
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+SCOPES = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/documents",
+]
 
 
 def _credentials():
@@ -83,7 +86,8 @@ class SheetsStore:
                 job.get("fit_score", ""),
                 job.get("role_type", ""),
                 job.get("practice_area", ""),
-                job.get("firm_research", ""),
+                job.get("application_deadline", ""),
+                job.get("eligibility", ""),
                 job.get("fit_summary", ""),
                 job.get("risks", ""),
                 job.get("recommended_action", ""),
@@ -98,10 +102,51 @@ class SheetsStore:
             .values()
             .append(
                 spreadsheetId=self.spreadsheet_id,
-                range="Jobs!A:U",
+                range="Jobs!A:V",
                 valueInputOption="USER_ENTERED",
                 insertDataOption="INSERT_ROWS",
                 body={"values": rows},
             )
             .execute()
         )
+
+
+class DocsStore:
+    def __init__(self, document_id: str) -> None:
+        self.document_id = document_id
+        self.service = build("docs", "v1", credentials=_credentials())
+
+    def append_research(self, jobs: list[dict[str, Any]]) -> None:
+        if not self.document_id or not jobs:
+            return
+        text = "\n".join(_research_entry(job) for job in jobs)
+        if not text.strip():
+            return
+        document = self.service.documents().get(documentId=self.document_id).execute()
+        end_index = document["body"]["content"][-1]["endIndex"] - 1
+        self.service.documents().batchUpdate(
+            documentId=self.document_id,
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": end_index},
+                            "text": "\n\n" + text,
+                        }
+                    }
+                ]
+            },
+        ).execute()
+
+
+def _research_entry(job: dict[str, Any]) -> str:
+    return (
+        f"{job.get('company', 'Unknown firm')} - {job.get('title', 'Unknown role')}\n"
+        f"URL: {job.get('url', '')}\n"
+        f"Role type: {job.get('role_type', '')}\n"
+        f"Practice area: {job.get('practice_area', '')}\n"
+        f"Deadline: {job.get('application_deadline', '')}\n"
+        f"Eligibility: {job.get('eligibility', '')}\n"
+        f"Research: {job.get('firm_research', '')}\n"
+        f"Fit summary: {job.get('fit_summary', '')}\n"
+    )
