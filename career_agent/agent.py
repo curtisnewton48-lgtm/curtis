@@ -24,12 +24,14 @@ class CareerSearchAgent:
         model: ModelClient,
         stage_two_model: ModelClient | None = None,
         docs: DocsStore | None = None,
+        verification_model: ModelClient | None = None,
     ) -> None:
         self.config = config
         self.store = store
         self.model = model
         self.stage_two_model = stage_two_model or model
         self.docs = docs
+        self.verification_model = verification_model or model
 
     def run(self) -> dict[str, int]:
         profile = self.store.profile()
@@ -70,6 +72,12 @@ class CareerSearchAgent:
             job["explicit_disqualifiers"] = fit.explicit_disqualifiers
             job["stage_two_reason"] = fit.stage_two_reason
             job["shortlisted"] = "yes" if self._is_stage_two_candidate(job) else "no"
+
+            if job["shortlisted"] == "yes" and self.verification_model:
+                verification = self.verification_model.verify_job(profile, job)
+                _apply_verification(job, verification)
+                if not verification.accept_for_stage_two:
+                    job["shortlisted"] = "no"
 
             if job["shortlisted"] == "yes" and self.docs:
                 firm_key = normalize_company_name(job.get("company", ""))
@@ -229,6 +237,40 @@ def _append_note(value: str, note: str) -> str:
     if note in value:
         return value
     return f"{value} | {note}"
+
+
+def _apply_verification(job: dict[str, str], verification: object) -> None:
+    if _use_corrected_value(getattr(verification, "corrected_deadline", "")):
+        job["application_deadline"] = getattr(verification, "corrected_deadline")
+    if _use_corrected_value(getattr(verification, "corrected_location", "")):
+        job["location"] = getattr(verification, "corrected_location")
+    if _use_corrected_value(getattr(verification, "corrected_salary_or_experience", "")):
+        job["salary"] = getattr(verification, "corrected_salary_or_experience")
+
+    note = (
+        "Verification: "
+        f"accepted={getattr(verification, 'accept_for_stage_two', False)}, "
+        f"real_job={getattr(verification, 'is_real_job', False)}, "
+        f"still_open={getattr(verification, 'job_still_open', False)}, "
+        f"deadline_correct={getattr(verification, 'deadline_correct', False)}, "
+        f"location_correct={getattr(verification, 'location_correct', False)}, "
+        f"salary_experience_accurate={getattr(verification, 'salary_experience_accurate', False)}, "
+        f"firm_exists={getattr(verification, 'firm_exists', False)}, "
+        f"confidence={getattr(verification, 'confidence', 0)}. "
+        f"Evidence: {getattr(verification, 'evidence', '')} "
+        f"Risks: {getattr(verification, 'risks', '')}"
+    )
+    job["risks"] = _append_note(job.get("risks", ""), note)
+    if not getattr(verification, "accept_for_stage_two", False):
+        job["stage_two_reason"] = _append_note(
+            job.get("stage_two_reason", ""),
+            "Blocked by verification micro-agent.",
+        )
+
+
+def _use_corrected_value(value: str) -> bool:
+    cleaned = (value or "").strip()
+    return bool(cleaned and cleaned.lower() not in {"not stated", "unclear", "n/a", "none"})
 
 
 def _normalise_label(value: str) -> str:
