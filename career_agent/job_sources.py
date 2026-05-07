@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import time
 from datetime import datetime, timezone
 from urllib.parse import urljoin
 
@@ -114,20 +115,16 @@ def fetch_adzuna_jobs(
 
     jobs = []
     for query in queries:
-        response = httpx.get(
-            f"https://api.adzuna.com/v1/api/jobs/{country}/search/1",
-            params={
-                "app_id": app_id,
-                "app_key": app_key,
-                "what": query,
-                "where": where,
-                "results_per_page": results_per_query,
-                "sort_by": "date",
-                "content-type": "application/json",
-            },
-            timeout=30,
+        response = _get_adzuna_with_retries(
+            country=country,
+            app_id=app_id,
+            app_key=app_key,
+            query=query,
+            where=where,
+            results_per_query=results_per_query,
         )
-        response.raise_for_status()
+        if response is None:
+            continue
         for item in response.json().get("results", []):
             company = item.get("company", {}).get("display_name", "")
             title = item.get("title", "")
@@ -151,6 +148,41 @@ def fetch_adzuna_jobs(
                 }
             )
     return jobs
+
+
+def _get_adzuna_with_retries(
+    country: str,
+    app_id: str,
+    app_key: str,
+    query: str,
+    where: str,
+    results_per_query: int,
+) -> httpx.Response | None:
+    params = {
+        "app_id": app_id,
+        "app_key": app_key,
+        "what": query,
+        "where": where,
+        "results_per_page": results_per_query,
+        "sort_by": "date",
+        "content-type": "application/json",
+    }
+    for attempt in range(3):
+        try:
+            response = httpx.get(
+                f"https://api.adzuna.com/v1/api/jobs/{country}/search/1",
+                params=params,
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {429, 500, 502, 503, 504}:
+                raise
+        except httpx.HTTPError:
+            pass
+        time.sleep(2 * (attempt + 1))
+    return None
 
 
 def _looks_like_job(text: str) -> bool:
