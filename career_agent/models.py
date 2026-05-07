@@ -10,6 +10,9 @@ from pydantic import BaseModel, Field
 
 class JobFit(BaseModel):
     score: int = Field(ge=0, le=100)
+    role_type: str
+    practice_area: str
+    firm_research: str
     summary: str
     risks: str
     recommended_action: str
@@ -22,9 +25,10 @@ class ModelClient(Protocol):
 
 
 SYSTEM_PROMPT = """You are a careful career-search agent.
-Score jobs against the user's career profile. Be practical, concise, and honest.
-Do not invent facts. If salary, location, or requirements are missing, note that as a risk.
-Return only valid JSON with keys: score, summary, risks, recommended_action, tailored_pitch."""
+Score UK legal jobs against the user's career profile. Focus on paralegal, trainee solicitor, and caseworker suitability.
+Research the firm only from the provided job posting context. Do not invent facts.
+If salary, location, practice area, firm details, or requirements are missing, note that as a risk.
+Return only valid JSON with keys: score, role_type, practice_area, firm_research, summary, risks, recommended_action, tailored_pitch."""
 
 
 def build_user_prompt(profile: dict[str, str], job: dict[str, str]) -> str:
