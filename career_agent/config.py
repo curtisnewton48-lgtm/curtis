@@ -27,7 +27,7 @@ class Config:
 
 def load_config() -> Config:
     load_dotenv()
-    sheet_id = os.getenv("GOOGLE_SHEET_ID")
+    sheet_id = os.getenv("GOOGLE_SHEET_ID", "").strip()
     if not sheet_id:
         raise RuntimeError("GOOGLE_SHEET_ID is required.")
     research_doc_id = os.getenv("GOOGLE_RESEARCH_DOC_ID", "").strip()
