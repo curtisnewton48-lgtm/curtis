@@ -20,6 +20,7 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 - Uses Gemini 3 Flash to extract role title, location, salary, deadline, requirements, eligibility, practice area, and first-pass fit score.
 - Writes application-tracking fields to the `Jobs` tab.
 - Shortlists active jobs in target practice areas.
+- Runs a cheap Mistral 7B verification micro-agent before Stage 2 accepts a job.
 - Reuses existing firm research docs when a later shortlisted job is from the same firm.
 - Creates one comprehensive Google Doc per shortlisted firm/job for Stage 2 deep research.
 - Leaves applications and outbound messages under human approval.
@@ -56,6 +57,7 @@ Add these GitHub repository secrets:
 - `MODEL_PROVIDER`
 - `MODEL_NAME`
 - `GEMINI_API_KEY`
+- `MISTRAL_API_KEY`
 - `ADZUNA_APP_ID`
 - `ADZUNA_APP_KEY`
 - `REED_API_KEY`
@@ -69,6 +71,8 @@ Recommended defaults:
 MODEL_PROVIDER=gemini
 MODEL_NAME=gemini-3-flash-preview
 STAGE_TWO_MODEL_NAME=gemini-3.1-pro-preview
+VERIFICATION_MODEL_PROVIDER=mistral
+VERIFICATION_MODEL_NAME=open-mistral-7b
 GOOGLE_SHEET_ID=1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c
 MAX_JOBS_PER_RUN=20
 MAX_JOBS_PER_MONTH=300
@@ -106,6 +110,7 @@ Stage 2 runs only when a job passes the stricter shortlist gate:
 - role level is a relevant graduate legal role
 - practice area match is `exact` or `related`
 - candidate evidence match is `strong` or `medium`
+- the verification micro-agent accepts it as a real, still-open role with no major factual contradiction
 
 The target practice areas are:
 
@@ -114,6 +119,8 @@ private client, wills, employment, antitrust, competition law, human rights, eu 
 ```
 
 ## Stage 2 Research
+
+Before Stage 2 research starts, the verification micro-agent checks whether the job appears real, whether the firm exists, whether the role is still open, and whether deadline, location, salary, and experience facts are accurate or at least not contradicted by the source text. Jobs blocked by verification stay in the tracker, but do not receive expensive Stage 2 research.
 
 Each shortlisted job gets an individual Google Doc covering:
 
