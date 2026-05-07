@@ -81,6 +81,9 @@ class SheetsStore:
                 job.get("source", ""),
                 job.get("status", "new"),
                 job.get("fit_score", ""),
+                job.get("role_type", ""),
+                job.get("practice_area", ""),
+                job.get("firm_research", ""),
                 job.get("fit_summary", ""),
                 job.get("risks", ""),
                 job.get("recommended_action", ""),
@@ -95,7 +98,7 @@ class SheetsStore:
             .values()
             .append(
                 spreadsheetId=self.spreadsheet_id,
-                range="Jobs!A:R",
+                range="Jobs!A:U",
                 valueInputOption="USER_ENTERED",
                 insertDataOption="INSERT_ROWS",
                 body={"values": rows},
