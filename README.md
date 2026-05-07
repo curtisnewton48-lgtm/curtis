@@ -19,7 +19,7 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 - Uses Gemini 3 Flash to extract role title, location, salary, deadline, requirements, eligibility, practice area, and first-pass fit score.
 - Writes application-tracking fields to the `Jobs` tab.
 - Shortlists active jobs in target practice areas.
-- Creates one comprehensive Google Doc per shortlisted firm/job for Stage 2 deep research.
+- Uses Gemini 3.1 Pro for one comprehensive Google Doc per shortlisted firm/job.
 - Leaves applications and outbound messages under human approval.
 
 ## Limits
@@ -49,6 +49,7 @@ Add these GitHub repository secrets:
 - `GOOGLE_RESEARCH_FOLDER_ID`
 - `MODEL_PROVIDER`
 - `MODEL_NAME`
+- `STAGE_TWO_MODEL_NAME`
 - `GEMINI_API_KEY`
 - `ADZUNA_APP_ID`
 - `ADZUNA_APP_KEY`
@@ -58,6 +59,7 @@ Recommended defaults:
 ```text
 MODEL_PROVIDER=gemini
 MODEL_NAME=gemini-3-flash-preview
+STAGE_TWO_MODEL_NAME=gemini-3.1-pro-preview
 GOOGLE_SHEET_ID=1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c
 MAX_JOBS_PER_RUN=20
 MAX_JOBS_PER_MONTH=300
