@@ -239,6 +239,49 @@ def fetch_google_search_jobs(
     return jobs
 
 
+def fetch_brave_search_jobs(
+    queries: list[str],
+    sites: list[str],
+    results_per_site: int = 5,
+) -> list[dict[str, str]]:
+    api_key = os.getenv("BRAVE_SEARCH_API_KEY")
+    if not api_key:
+        return []
+
+    jobs = []
+    for site in sites:
+        for query in queries:
+            response = _get_brave_search_with_retries(
+                api_key=api_key,
+                query=query,
+                site=site,
+                results_per_site=results_per_site,
+            )
+            if response is None:
+                continue
+            for item in response.json().get("web", {}).get("results", []):
+                title = _clean(item.get("title", ""))
+                url = item.get("url", "")
+                description = _clean(item.get("description", ""))
+                company = _company_from_brave_result(item, site)
+                jobs.append(
+                    {
+                        "job_id": stable_job_id(company, title, url),
+                        "title": title,
+                        "company": company,
+                        "location": "",
+                        "remote": "remote" if "remote" in (title + " " + description).lower() else "",
+                        "salary": "",
+                        "url": url,
+                        "date_posted": "",
+                        "found_at": datetime.now(timezone.utc).isoformat(),
+                        "source": f"brave_search:{site}:{query}",
+                        "raw_description": description[:8000],
+                    }
+                )
+    return jobs
+
+
 def _get_adzuna_with_retries(
     country: str,
     app_id: str,
@@ -340,6 +383,47 @@ def _get_google_search_with_retries(
     return None
 
 
+def _get_brave_search_with_retries(
+    api_key: str,
+    query: str,
+    site: str,
+    results_per_site: int,
+) -> httpx.Response | None:
+    params = {
+        "q": f'{query} site:{site} ("deadline" OR "apply" OR "job" OR "vacancy")',
+        "count": max(1, min(results_per_site, 20)),
+        "country": "gb",
+        "search_lang": "en",
+        "safesearch": "moderate",
+    }
+    headers = {
+        "Accept": "application/json",
+        "Accept-Encoding": "gzip",
+        "X-Subscription-Token": api_key,
+    }
+    for attempt in range(3):
+        try:
+            response = httpx.get(
+                "https://api.search.brave.com/res/v1/web/search",
+                params=params,
+                headers=headers,
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            if exc.response.status_code not in {429, 500, 502, 503, 504}:
+                print(
+                    "Brave search source skipped "
+                    f"for {site} / {query}: HTTP {exc.response.status_code}"
+                )
+                return None
+        except httpx.HTTPError:
+            pass
+        time.sleep(2 * (attempt + 1))
+    return None
+
+
 def _looks_like_job(text: str) -> bool:
     lowered = text.lower()
     job_terms = [
@@ -428,3 +512,11 @@ def _company_from_search_result(item: dict, fallback_site: str) -> str:
             return _clean(site_name)
     display_link = item.get("displayLink") or urlparse(item.get("link", "")).netloc
     return _clean(display_link or fallback_site)
+
+
+def _company_from_brave_result(item: dict, fallback_site: str) -> str:
+    profile = item.get("profile") or {}
+    name = profile.get("name")
+    if name:
+        return _clean(name)
+    return _clean(urlparse(item.get("url", "")).netloc or fallback_site)
