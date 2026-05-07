@@ -13,6 +13,10 @@ class Config:
     model_name: str
     max_jobs_per_run: int
     min_fit_score: int
+    job_queries: list[str]
+    adzuna_country: str
+    adzuna_where: str
+    adzuna_results_per_query: int
 
 
 def load_config() -> Config:
@@ -30,4 +34,15 @@ def load_config() -> Config:
         model_name=os.getenv("MODEL_NAME", default_model).strip(),
         max_jobs_per_run=int(os.getenv("MAX_JOBS_PER_RUN", "50")),
         min_fit_score=int(os.getenv("MIN_FIT_SCORE", "65")),
+        job_queries=[
+            query.strip()
+            for query in os.getenv(
+                "JOB_QUERIES",
+                "paralegal, trainee solicitor, legal caseworker, immigration caseworker, housing caseworker",
+            ).split(",")
+            if query.strip()
+        ],
+        adzuna_country=os.getenv("ADZUNA_COUNTRY", "gb").strip().lower(),
+        adzuna_where=os.getenv("ADZUNA_WHERE", "United Kingdom").strip(),
+        adzuna_results_per_query=int(os.getenv("ADZUNA_RESULTS_PER_QUERY", "25")),
     )
