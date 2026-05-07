@@ -15,6 +15,16 @@ class JobFit(BaseModel):
     application_deadline: str
     deadline_status: str
     eligibility: str
+    eligibility_status: str = "unclear"
+    role_level: str = "unclear"
+    degree_requirement: str = "not stated"
+    sqe_lpc_requirement: str = "not stated"
+    work_authorisation: str = "not stated"
+    application_route: str = "not stated"
+    explicit_disqualifiers: str = "none found"
+    practice_area_match: str = "unclear"
+    candidate_evidence_match: str = "unclear"
+    stage_two_reason: str = ""
     summary: str
     risks: str
     recommended_action: str
@@ -39,7 +49,13 @@ Extract and triage paralegal, trainee solicitor, and legal caseworker roles.
 Return concise structured facts only. Do not do deep firm research.
 Extract application deadline and eligibility requirements when present. Use "not stated" when not provided.
 deadline_status must be one of: active, expired, not_stated, unclear.
-Return only valid JSON with keys: score, role_type, practice_area, application_deadline, deadline_status, eligibility, summary, risks, recommended_action, tailored_pitch."""
+eligibility_status must be one of: eligible, probably_eligible, unclear, not_eligible.
+role_level must be one of: paralegal, legal_assistant, trainee_solicitor, caseworker, vacation_scheme, training_contract, graduate_scheme, other, unclear.
+practice_area_match must be one of: exact, related, weak, none, unclear.
+candidate_evidence_match must be one of: strong, medium, weak, none, unclear.
+Only mark not_eligible when the listing contains a clear blocker, such as required qualification/status the candidate lacks, expired deadline, location/work authorisation barrier, or role seniority mismatch.
+Treat missing eligibility information as unclear, not not_eligible.
+Return only valid JSON with keys: score, role_type, role_level, practice_area, practice_area_match, application_deadline, deadline_status, eligibility, eligibility_status, degree_requirement, sqe_lpc_requirement, work_authorisation, application_route, explicit_disqualifiers, candidate_evidence_match, stage_two_reason, summary, risks, recommended_action, tailored_pitch."""
 
 STAGE_TWO_PROMPT = """You are Stage 2 of a UK legal career-search agent for a law graduate.
 Create comprehensive firm research for a shortlisted legal job. Use only supplied job context and web-grounded information available to the model/tool. Do not invent facts; say "not found" where needed.
