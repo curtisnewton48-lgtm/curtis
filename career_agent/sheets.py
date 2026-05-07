@@ -74,7 +74,7 @@ class SheetsStore:
         for row in rows:
             if not row:
                 continue
-            updated_at = row[21] if len(row) > 21 else ""
+            updated_at = row[-1] if len(row) > 21 else ""
             found_at = row[8] if len(row) > 8 else ""
             if _is_same_utc_month(updated_at or found_at, now):
                 count += 1
