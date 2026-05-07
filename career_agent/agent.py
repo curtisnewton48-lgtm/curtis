@@ -5,7 +5,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 
 from career_agent.config import Config
-from career_agent.job_sources import fetch_adzuna_jobs, fetch_jobs_for_company, fetch_reed_jobs
+from career_agent.job_sources import (
+    fetch_adzuna_jobs,
+    fetch_google_search_jobs,
+    fetch_jobs_for_company,
+    fetch_reed_jobs,
+)
 from career_agent.models import ModelClient
 from career_agent.sheets import DocsStore, SheetsStore
 
@@ -99,6 +104,13 @@ class CareerSearchAgent:
                 queries=self.config.job_queries,
                 location=self.config.reed_location,
                 results_per_query=self.config.reed_results_per_query,
+            )
+        )
+        jobs.extend(
+            fetch_google_search_jobs(
+                queries=self.config.job_queries,
+                sites=self.config.google_search_sites,
+                results_per_site=self.config.google_search_results_per_site,
             )
         )
         with ThreadPoolExecutor(max_workers=6) as executor:
