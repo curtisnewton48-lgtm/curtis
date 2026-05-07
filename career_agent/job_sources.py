@@ -220,6 +220,8 @@ def fetch_google_search_jobs(
                 title = _clean(item.get("title", ""))
                 url = item.get("link", "")
                 snippet = _clean(item.get("snippet", ""))
+                if not _is_search_job_result(title, url, snippet, query):
+                    continue
                 company = _company_from_search_result(item, site)
                 jobs.append(
                     {
@@ -263,6 +265,8 @@ def fetch_brave_search_jobs(
                 title = _clean(item.get("title", ""))
                 url = item.get("url", "")
                 description = _clean(item.get("description", ""))
+                if not _is_search_job_result(title, url, description, query):
+                    continue
                 company = _company_from_brave_result(item, site)
                 jobs.append(
                     {
@@ -459,6 +463,86 @@ def _looks_like_job(text: str) -> bool:
         "remote",
     ]
     return any(term in lowered for term in job_terms)
+
+
+def _is_search_job_result(title: str, url: str, description: str, query: str = "") -> bool:
+    haystack = " ".join([title, url, description, query]).lower()
+    if _looks_like_advice_or_article(haystack):
+        return False
+    role_terms = [
+        "paralegal",
+        "trainee solicitor",
+        "training contract",
+        "legal caseworker",
+        "caseworker",
+        "immigration caseworker",
+        "housing caseworker",
+        "vacation scheme",
+        "sqe",
+    ]
+    action_terms = [
+        "apply",
+        "application",
+        "deadline",
+        "vacancy",
+        "vacancies",
+        "job",
+        "jobs",
+        "career",
+        "careers",
+        "recruitment",
+        "current opportunities",
+        "opportunities",
+    ]
+    url_terms = [
+        "/job",
+        "/jobs",
+        "/vacanc",
+        "/career",
+        "/careers",
+        "/recruit",
+        "/opportunit",
+        "/training-contract",
+        "/trainee",
+        "/paralegal",
+        "/caseworker",
+        "/apply",
+    ]
+    has_role = any(term in haystack for term in role_terms)
+    has_action = any(term in haystack for term in action_terms)
+    has_job_url = any(term in url.lower() for term in url_terms)
+    return has_role and (has_action or has_job_url)
+
+
+def _looks_like_advice_or_article(text: str) -> bool:
+    article_terms = [
+        "advice",
+        "tips",
+        "tip ",
+        "how to",
+        "guide",
+        "guides",
+        "blog",
+        "blogs",
+        "news",
+        "podcast",
+        "webinar",
+        "event",
+        "events",
+        "interview with",
+        "success story",
+        "stories",
+        "ranking",
+        "rankings",
+        "best law firms",
+        "commercial awareness",
+        "what is",
+        "why you should",
+        "succeed as a candidate",
+        "application tips",
+        "interview tips",
+    ]
+    return any(term in text for term in article_terms)
 
 
 def _matches_keywords(text: str, keywords: str) -> bool:
