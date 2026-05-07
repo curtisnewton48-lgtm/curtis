@@ -6,14 +6,19 @@ Tracker created in your Google Drive:
 
 https://docs.google.com/spreadsheets/d/1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c/edit
 
+Firm research document:
+
+https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/edit
+
 ## What It Does
 
 - Reads `Profile`, `TargetCompanies`, and `Settings` tabs from Google Sheets.
 - Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna.
 - Pulls additional postings from configurable RSS feeds and career-page URLs.
 - Deduplicates jobs by URL/title/company.
-- Uses OpenAI or Mistral to score each job and create a firm research note.
-- Writes results to the `Jobs` tab.
+- Uses OpenAI or Mistral to score each job, extract application deadlines, and assess eligibility.
+- Writes role title, deadline, eligibility, and application-tracking fields to the `Jobs` tab.
+- Writes longer firm research notes to the Google Doc.
 - Leaves applications and outbound messages under human approval.
 
 ## Quick Start
@@ -22,8 +27,8 @@ https://docs.google.com/spreadsheets/d/1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsm
    - OpenAI: set `OPENAI_API_KEY`, or
    - Mistral: set `MISTRAL_API_KEY`.
 2. Create Adzuna API credentials at https://developer.adzuna.com/ and set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
-3. Create Google service account credentials with access to the tracker Sheet.
-4. Share the Google Sheet with the service account email.
+3. Create Google service account credentials with access to the tracker Sheet and firm research Doc.
+4. Share both Google files with the service account email.
 5. Copy `.env.example` to `.env` and fill in the values.
 6. Install dependencies:
 
@@ -55,6 +60,7 @@ Add these GitHub repository secrets:
 
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
 - `GOOGLE_SHEET_ID`
+- `GOOGLE_RESEARCH_DOC_ID`
 - `MODEL_PROVIDER`
 - `MODEL_NAME`
 - `OPENAI_API_KEY` if using OpenAI
@@ -67,6 +73,8 @@ Recommended default:
 ```text
 MODEL_PROVIDER=openai
 MODEL_NAME=gpt-5.4-mini
+GOOGLE_SHEET_ID=1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c
+GOOGLE_RESEARCH_DOC_ID=1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ
 ```
 
 Mistral option:
@@ -84,7 +92,7 @@ Fill in:
 - `TargetCompanies`: optional firm names and careers URLs for extra direct-source checks.
 - `Settings`: model provider, model name, max jobs per run.
 
-The agent writes to `Jobs`, including firm research, practice-area clues, role type, fit score, risks, and tailored pitch. You manually move serious opportunities into `Applications` when you apply.
+The agent writes to `Jobs`, including role title, application deadline, eligibility, practice-area clues, role type, fit score, risks, and tailored pitch. Longer firm research is appended to the research Google Doc. You manually move serious opportunities into `Applications` when you apply.
 
 ## Safety
 
