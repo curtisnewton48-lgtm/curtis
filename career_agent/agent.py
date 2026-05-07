@@ -47,9 +47,7 @@ class CareerSearchAgent:
             }
 
         discovered = self._discover(companies)
-        fresh_jobs = [
-            job for job in discovered if job["job_id"] not in existing_ids
-        ][:run_limit]
+        fresh_jobs = _select_diverse_fresh_jobs(discovered, existing_ids, run_limit)
 
         scored = []
         for job in fresh_jobs:
@@ -91,6 +89,11 @@ class CareerSearchAgent:
             "new_jobs_scored": len(scored),
             "shortlisted_for_stage_two": sum(1 for job in scored if job.get("shortlisted") == "yes"),
             "monthly_remaining": max(0, monthly_remaining - len(scored)),
+            "reed_discovered": _count_source(discovered, "reed"),
+            "brave_discovered": _count_source(discovered, "brave_search"),
+            "adzuna_discovered": _count_source(discovered, "adzuna"),
+            "google_discovered": _count_source(discovered, "google_search"),
+            "direct_discovered": _count_source(discovered, "direct"),
         }
 
     def _discover(self, companies: list[dict[str, str]]) -> list[dict[str, str]]:
@@ -167,3 +170,55 @@ def _deadline_expired(deadline: str, status: str) -> bool:
     except ValueError:
         return False
     return parsed.date() < datetime.now(timezone.utc).date()
+
+
+def _select_diverse_fresh_jobs(
+    jobs: list[dict[str, str]],
+    existing_ids: set[str],
+    limit: int,
+) -> list[dict[str, str]]:
+    buckets: dict[str, list[dict[str, str]]] = {}
+    seen = set(existing_ids)
+    for job in jobs:
+        job_id = job.get("job_id", "")
+        if not job_id or job_id in seen:
+            continue
+        seen.add(job_id)
+        buckets.setdefault(_source_family(job), []).append(job)
+
+    priority = ["brave_search", "reed", "adzuna", "google_search", "direct", "error"]
+    selected = []
+    while len(selected) < limit and any(buckets.values()):
+        for family in priority:
+            if len(selected) >= limit:
+                break
+            bucket = buckets.get(family) or []
+            if bucket:
+                selected.append(bucket.pop(0))
+        for family in list(buckets):
+            if len(selected) >= limit:
+                break
+            if family not in priority and buckets[family]:
+                selected.append(buckets[family].pop(0))
+    return selected
+
+
+def _source_family(job: dict[str, str]) -> str:
+    source = (job.get("source") or "").lower()
+    if source.startswith("brave_search"):
+        return "brave_search"
+    if source.startswith("reed"):
+        return "reed"
+    if source.startswith("adzuna"):
+        return "adzuna"
+    if source.startswith("google_search"):
+        return "google_search"
+    if source in {"rss", "career_page"}:
+        return "direct"
+    if source == "error":
+        return "error"
+    return source.split(":", 1)[0] or "unknown"
+
+
+def _count_source(jobs: list[dict[str, str]], family: str) -> int:
+    return sum(1 for job in jobs if _source_family(job) == family)
