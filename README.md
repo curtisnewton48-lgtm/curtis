@@ -71,7 +71,7 @@ STAGE_TWO_MODEL_NAME=gemini-3.1-pro-preview
 GOOGLE_SHEET_ID=1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c
 MAX_JOBS_PER_RUN=20
 MAX_JOBS_PER_MONTH=300
-STAGE_TWO_MIN_FIT_SCORE=70
+STAGE_TWO_MIN_FIT_SCORE=80
 ADZUNA_RESULTS_PER_QUERY=20
 REED_RESULTS_PER_QUERY=20
 REED_LOCATION=United Kingdom
@@ -96,7 +96,17 @@ Practice interests:
 
 ## Shortlist Areas
 
-Stage 2 runs only when a job appears active and matches one or more of:
+Stage 2 runs only when a job passes the stricter shortlist gate:
+
+- fit score is at least `STAGE_TWO_MIN_FIT_SCORE`
+- deadline is active or unclear, not expired
+- eligibility is `eligible`, `probably_eligible`, or `unclear`
+- there are no explicit disqualifiers
+- role level is a relevant graduate legal role
+- practice area match is `exact` or `related`
+- candidate evidence match is `strong` or `medium`
+
+The target practice areas are:
 
 ```text
 private client, wills, employment, antitrust, competition law, human rights, eu law, immigration law, real estate, housing, international law
