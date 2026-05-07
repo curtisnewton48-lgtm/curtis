@@ -13,7 +13,7 @@ from career_agent.job_sources import (
     fetch_reed_jobs,
 )
 from career_agent.models import ModelClient
-from career_agent.sheets import DocsStore, SheetsStore
+from career_agent.sheets import DocsStore, SheetsStore, normalize_company_name
 
 
 class CareerSearchAgent:
@@ -35,6 +35,7 @@ class CareerSearchAgent:
         profile = self.store.profile()
         companies = self.store.target_companies()
         existing_ids = self.store.existing_job_ids()
+        firm_research_memory = self.store.research_memory_by_company()
         monthly_remaining = self.config.max_jobs_per_month - self.store.current_month_job_count()
         run_limit = max(0, min(self.config.max_jobs_per_run, monthly_remaining))
         if run_limit == 0:
@@ -71,11 +72,22 @@ class CareerSearchAgent:
             job["shortlisted"] = "yes" if self._is_stage_two_candidate(job) else "no"
 
             if job["shortlisted"] == "yes" and self.docs:
-                research = self.stage_two_model.deep_research(profile, job)
-                job["research_doc_url"] = self.docs.create_research_doc(
-                    research.title,
-                    research.content,
-                )
+                firm_key = normalize_company_name(job.get("company", ""))
+                existing_research_url = firm_research_memory.get(firm_key)
+                if existing_research_url:
+                    job["research_doc_url"] = existing_research_url
+                    job["risks"] = _append_note(
+                        job.get("risks", ""),
+                        "Firm research memory: reused existing research document.",
+                    )
+                else:
+                    research = self.stage_two_model.deep_research(profile, job)
+                    job["research_doc_url"] = self.docs.create_research_doc(
+                        research.title,
+                        research.content,
+                    )
+                    if firm_key and job["research_doc_url"]:
+                        firm_research_memory[firm_key] = job["research_doc_url"]
 
             job.update(
                 {
@@ -209,6 +221,14 @@ def _risk_note(fit: object) -> str:
         f"Stage 2 reason: {getattr(fit, 'stage_two_reason', '')}",
     ]
     return " | ".join(part for part in parts if str(part).strip())
+
+
+def _append_note(value: str, note: str) -> str:
+    if not value:
+        return note
+    if note in value:
+        return value
+    return f"{value} | {note}"
 
 
 def _normalise_label(value: str) -> str:
