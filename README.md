@@ -51,6 +51,7 @@ Add these GitHub repository secrets:
 - `GOOGLE_SERVICE_ACCOUNT_JSON`
 - `GOOGLE_SHEET_ID`
 - `GOOGLE_RESEARCH_FOLDER_ID`
+- `PROFILE_CONTEXT`
 - `MODEL_PROVIDER`
 - `MODEL_NAME`
 - `GEMINI_API_KEY`
@@ -78,6 +79,19 @@ GOOGLE_SEARCH_RESULTS_PER_SITE=3
 GOOGLE_SEARCH_SITES=legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com
 BRAVE_SEARCH_RESULTS_PER_SITE=5
 BRAVE_SEARCH_SITES=legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com
+```
+
+Recommended `PROFILE_CONTEXT` secret format:
+
+```text
+Name:
+Education:
+Target roles:
+Location preferences:
+Languages:
+Relevant experience:
+Key strengths:
+Practice interests:
 ```
 
 ## Shortlist Areas
