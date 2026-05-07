@@ -34,13 +34,17 @@ jobs:
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
           REED_API_KEY: ${{ secrets.REED_API_KEY }}
+          GOOGLE_SEARCH_API_KEY: ${{ secrets.GOOGLE_SEARCH_API_KEY }}
+          GOOGLE_SEARCH_ENGINE_ID: ${{ secrets.GOOGLE_SEARCH_ENGINE_ID }}
           ADZUNA_COUNTRY: ${{ vars.ADZUNA_COUNTRY || 'gb' }}
           ADZUNA_WHERE: ${{ vars.ADZUNA_WHERE || 'United Kingdom' }}
           REED_LOCATION: ${{ vars.REED_LOCATION || 'United Kingdom' }}
           JOB_QUERIES: ${{ vars.JOB_QUERIES || 'paralegal, trainee solicitor, legal caseworker, immigration caseworker, housing caseworker' }}
+          GOOGLE_SEARCH_SITES: ${{ vars.GOOGLE_SEARCH_SITES || 'legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com' }}
           SHORTLIST_PRACTICE_AREAS: ${{ vars.SHORTLIST_PRACTICE_AREAS || 'private client, wills, employment, antitrust, competition law, human rights, eu law, immigration law, real estate, housing, international law' }}
           ADZUNA_RESULTS_PER_QUERY: ${{ vars.ADZUNA_RESULTS_PER_QUERY || '20' }}
           REED_RESULTS_PER_QUERY: ${{ vars.REED_RESULTS_PER_QUERY || '20' }}
+          GOOGLE_SEARCH_RESULTS_PER_SITE: ${{ vars.GOOGLE_SEARCH_RESULTS_PER_SITE || '3' }}
           MAX_JOBS_PER_RUN: ${{ vars.MAX_JOBS_PER_RUN || '20' }}
           MAX_JOBS_PER_MONTH: ${{ vars.MAX_JOBS_PER_MONTH || '300' }}
           MIN_FIT_SCORE: ${{ vars.MIN_FIT_SCORE || '65' }}
