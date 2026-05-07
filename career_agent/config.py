@@ -27,6 +27,8 @@ class Config:
     reed_results_per_query: int
     google_search_sites: list[str]
     google_search_results_per_site: int
+    brave_search_sites: list[str]
+    brave_search_results_per_site: int
 
 
 def load_config() -> Config:
@@ -85,4 +87,16 @@ def load_config() -> Config:
             if site.strip()
         ],
         google_search_results_per_site=int(os.getenv("GOOGLE_SEARCH_RESULTS_PER_SITE", "3")),
+        brave_search_sites=[
+            site.strip()
+            for site in os.getenv(
+                "BRAVE_SEARCH_SITES",
+                os.getenv(
+                    "GOOGLE_SEARCH_SITES",
+                    "legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com",
+                ),
+            ).split(",")
+            if site.strip()
+        ],
+        brave_search_results_per_site=int(os.getenv("BRAVE_SEARCH_RESULTS_PER_SITE", "5")),
     )
