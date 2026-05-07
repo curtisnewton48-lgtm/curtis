@@ -12,6 +12,8 @@ class JobFit(BaseModel):
     score: int = Field(ge=0, le=100)
     role_type: str
     practice_area: str
+    application_deadline: str
+    eligibility: str
     firm_research: str
     summary: str
     risks: str
@@ -27,8 +29,9 @@ class ModelClient(Protocol):
 SYSTEM_PROMPT = """You are a careful career-search agent.
 Score UK legal jobs against the user's career profile. Focus on paralegal, trainee solicitor, and caseworker suitability.
 Research the firm only from the provided job posting context. Do not invent facts.
-If salary, location, practice area, firm details, or requirements are missing, note that as a risk.
-Return only valid JSON with keys: score, role_type, practice_area, firm_research, summary, risks, recommended_action, tailored_pitch."""
+Extract application deadline and eligibility requirements when present. Use "not stated" when not provided.
+If salary, location, practice area, firm details, deadline, or requirements are missing, note that as a risk.
+Return only valid JSON with keys: score, role_type, practice_area, application_deadline, eligibility, firm_research, summary, risks, recommended_action, tailored_pitch."""
 
 
 def build_user_prompt(profile: dict[str, str], job: dict[str, str]) -> str:
