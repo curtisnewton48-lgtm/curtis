@@ -13,7 +13,7 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 ## What It Does
 
 - Reads `Profile`, `TargetCompanies`, and `Settings` tabs from Google Sheets.
-- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna, Reed, and Google Programmable Search.
+- Searches UK roles for paralegal, trainee solicitor, and caseworker positions with Adzuna, Reed, Google Programmable Search, and Brave Search.
 - Looks across legal-specific sources such as Legal Cheek, LawCareers.Net, Law Gazette Jobs, TotallyLegal, jobs.ac.uk, charity legal roles, Civil Service Jobs, and Indeed search results.
 - Pulls additional postings from configurable RSS feeds and career-page URLs.
 - Deduplicates jobs by URL/title/company.
@@ -37,9 +37,10 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 2. Create Adzuna API credentials at https://developer.adzuna.com/ and set `ADZUNA_APP_ID` and `ADZUNA_APP_KEY`.
 3. Create a Reed Jobseeker API key at https://www.reed.co.uk/developers/jobseeker and set `REED_API_KEY`.
 4. Optional but recommended for broad coverage: create a Google Programmable Search engine and set `GOOGLE_SEARCH_API_KEY` and `GOOGLE_SEARCH_ENGINE_ID`.
-5. Create Google service account credentials with access to the tracker Sheet and your research Drive folder.
-6. Share the Google Sheet and research folder with the service account email.
-7. Add the GitHub repository secrets listed below.
+5. Optional but recommended if Google Search is blocked: create a Brave Search API key and set `BRAVE_SEARCH_API_KEY`.
+6. Create Google service account credentials with access to the tracker Sheet and your research Drive folder.
+7. Share the Google Sheet and research folder with the service account email.
+8. Add the GitHub repository secrets listed below.
 
 ## GitHub Deployment
 
@@ -58,6 +59,7 @@ Add these GitHub repository secrets:
 - `REED_API_KEY`
 - `GOOGLE_SEARCH_API_KEY`
 - `GOOGLE_SEARCH_ENGINE_ID`
+- `BRAVE_SEARCH_API_KEY`
 
 Recommended defaults:
 
@@ -74,6 +76,8 @@ REED_RESULTS_PER_QUERY=20
 REED_LOCATION=United Kingdom
 GOOGLE_SEARCH_RESULTS_PER_SITE=3
 GOOGLE_SEARCH_SITES=legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com
+BRAVE_SEARCH_RESULTS_PER_SITE=5
+BRAVE_SEARCH_SITES=legalcheek.com, lawcareers.net, jobs.lawgazette.co.uk, totallylegal.com, jobs.ac.uk, charityjob.co.uk, civilservicejobs.service.gov.uk, indeed.com
 ```
 
 ## Shortlist Areas
