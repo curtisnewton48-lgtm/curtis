@@ -43,7 +43,11 @@ class SheetsStore:
 
     def profile(self) -> dict[str, str]:
         rows = self.values("Profile!A2:C100")
-        return {row[0]: row[1] if len(row) > 1 else "" for row in rows if row}
+        profile = {row[0]: row[1] if len(row) > 1 else "" for row in rows if row}
+        profile_context = os.getenv("PROFILE_CONTEXT", "").strip()
+        if profile_context:
+            profile["Private CV/Profile Context"] = profile_context
+        return profile
 
     def target_companies(self) -> list[dict[str, str]]:
         rows = self.values("TargetCompanies!A2:H500")
