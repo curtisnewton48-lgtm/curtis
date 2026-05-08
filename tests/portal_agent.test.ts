@@ -16,7 +16,23 @@ async function testPortalAgentReturnsStructuredAnswers(): Promise<void> {
   }));
 
   const fakeQuestions = [{ question: "Describe a time you showed teamwork (250 words)" }];
-  const fakeDossier = { culture: "test", competencies: [], application_strategy: "test" };
+  const fakeDossier = {
+    job_id: "123",
+    firm_name: "Law Firm",
+    role_title: "Paralegal",
+    culture: "test",
+    values: "test",
+    training: "test",
+    recruitment: "test",
+    commercial_awareness: "test",
+    practice_areas: "test",
+    clients: "test",
+    risks: "test",
+    application_strategy: "test",
+    interview_strategy: "test",
+    competency_mapping: "test",
+    tone_guidance: "test",
+  };
   const fakeStarBank = { stars: [] };
   const fakeCv = { experience: [] };
 
