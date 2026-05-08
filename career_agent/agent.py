@@ -26,6 +26,7 @@ class CareerSearchAgent:
         docs: DocsStore | None = None,
         verification_model: ModelClient | None = None,
         micro_agent_model: ModelClient | None = None,
+        portal_answer_model: ModelClient | None = None,
     ) -> None:
         self.config = config
         self.store = store
@@ -34,6 +35,7 @@ class CareerSearchAgent:
         self.docs = docs
         self.verification_model = verification_model or model
         self.micro_agent_model = micro_agent_model or model
+        self.portal_answer_model = portal_answer_model
 
     def run(self) -> dict[str, int]:
         profile = self.store.profile()
@@ -55,6 +57,7 @@ class CareerSearchAgent:
         for retry_job in retry_jobs:
             self._run_stage_two(profile, retry_job, firm_research_memory)
             self._run_cv_tailoring(profile, retry_job)
+            self._run_portal_answers(profile, retry_job)
             retry_job["status"] = "shortlisted" if retry_job.get("research_doc_url") else "processing_error"
 
         discovered = self._discover(companies)
@@ -100,6 +103,7 @@ class CareerSearchAgent:
             if job["shortlisted"] == "yes":
                 self._run_stage_two(profile, job, firm_research_memory)
                 self._run_cv_tailoring(profile, job)
+                self._run_portal_answers(profile, job)
 
             job.update(
                 {
@@ -122,6 +126,7 @@ class CareerSearchAgent:
             "shortlisted_for_stage_two": sum(1 for job in scored if job.get("shortlisted") == "yes"),
             "stage_two_retries": len(retry_jobs),
             "tailored_cvs_created": sum(1 for job in scored if job.get("cv_doc_url")),
+            "portal_answer_packs_created": sum(1 for job in scored if job.get("portal_answers_doc_url")),
             "monthly_remaining": max(0, monthly_remaining - len(scored)),
             "reed_discovered": _count_source(discovered, "reed"),
             "brave_discovered": _count_source(discovered, "brave_search"),
@@ -256,6 +261,21 @@ class CareerSearchAgent:
             job["risks"] = _append_note(
                 job.get("risks", ""),
                 f"CV tailoring micro-agent failed: {type(exc).__name__}: {exc}",
+            )
+
+    def _run_portal_answers(self, profile: dict[str, str], job: dict[str, str]) -> None:
+        if not self.docs or not self.portal_answer_model:
+            return
+        try:
+            answer_pack = self.portal_answer_model.generate_portal_answers(profile, job)
+            job["portal_answers_doc_url"] = self.docs.create_support_doc(
+                answer_pack.title,
+                answer_pack.content,
+            )
+        except Exception as exc:
+            job["risks"] = _append_note(
+                job.get("risks", ""),
+                f"Portal answer agent failed: {type(exc).__name__}: {exc}",
             )
 
 _STAGE_TWO_ROLE_LEVELS = {
