@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Stage1Job",
+  "type": "object",
+  "required": [
+    "job_id",
+    "title",
+    "employer",
+    "location",
+    "url",
+    "raw_description",
+    "source"
+  ],
+  "properties": {
+    "job_id": { "type": "string" },
+    "title": { "type": "string" },
+    "employer": { "type": "string" },
+    "location": { "type": "string" },
+    "url": { "type": "string" },
+    "raw_description": { "type": "string" },
+    "source": { "type": "string" }
+  }
+}
