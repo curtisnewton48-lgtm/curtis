@@ -5,7 +5,7 @@ import os
 from typing import Protocol
 
 import httpx
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class JobFit(BaseModel):
@@ -50,6 +50,37 @@ class JobVerification(BaseModel):
     corrected_salary_or_experience: str = "not stated"
     evidence: str
     risks: str
+
+    @field_validator("confidence", mode="before")
+    @classmethod
+    def _coerce_confidence(cls, value: object) -> int:
+        if isinstance(value, float) and 0 <= value <= 1:
+            return round(value * 100)
+        if isinstance(value, (float, int)):
+            return round(value)
+        if isinstance(value, str):
+            try:
+                parsed = float(value.strip().rstrip("%"))
+            except ValueError:
+                return 0
+            return round(parsed * 100) if 0 <= parsed <= 1 else round(parsed)
+        return 0
+
+    @field_validator(
+        "corrected_deadline",
+        "corrected_location",
+        "corrected_salary_or_experience",
+        "evidence",
+        "risks",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_text(cls, value: object) -> str:
+        if value is None:
+            return "not stated"
+        if isinstance(value, str):
+            return value
+        return json.dumps(value, ensure_ascii=True)
 
 
 class ModelClient(Protocol):
