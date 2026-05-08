@@ -2,6 +2,9 @@ import modelConfig from "../config/models.json";
 
 type JsonSchema = Record<string, unknown>;
 type GeminiCaller = (purpose: string, prompt: string, schema: JsonSchema) => Promise<unknown>;
+type GeminiOptions = {
+  arrayMode?: boolean;
+};
 
 declare const process: {
   env: Record<string, string | undefined>;
@@ -17,6 +20,7 @@ export async function callGemini(
   purpose: string,
   prompt: string,
   schema: JsonSchema,
+  options: GeminiOptions = {},
 ): Promise<unknown> {
   if (testCaller) {
     return testCaller(purpose, prompt, schema);
@@ -28,7 +32,13 @@ export async function callGemini(
   }
 
   const configuredModels = modelConfig as Record<string, string>;
-  const model = process.env.STAGE_TWO_MODEL_NAME || configuredModels[purpose] || "gemini-3.1-pro";
+  const model =
+    purpose === "stage1"
+      ? process.env.STAGE_ONE_MODEL_NAME || configuredModels[purpose] || "gemini-3.0-flash"
+      : process.env.STAGE_TWO_MODEL_NAME || configuredModels[purpose] || "gemini-3.1-pro";
+  const responseContract = options.arrayMode
+    ? `Return JSON only as an array. Each item must match this schema:\n${JSON.stringify(schema)}`
+    : `Return JSON only matching this schema:\n${JSON.stringify(schema)}`;
 
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
@@ -41,7 +51,7 @@ export async function callGemini(
             role: "user",
             parts: [
               {
-                text: `${prompt}\n\nReturn JSON only matching this schema:\n${JSON.stringify(schema)}`,
+                text: `${prompt}\n\n${responseContract}`,
               },
             ],
           },
@@ -62,5 +72,11 @@ export async function callGemini(
   if (typeof text !== "string") {
     return text;
   }
-  return JSON.parse(text);
+  const parsed = JSON.parse(text);
+  if (options.arrayMode && !Array.isArray(parsed)) {
+    if (Array.isArray(parsed?.items)) return parsed.items;
+    if (Array.isArray(parsed?.jobs)) return parsed.jobs;
+    throw new Error(`Gemini ${purpose} response was not an array.`);
+  }
+  return parsed;
 }
