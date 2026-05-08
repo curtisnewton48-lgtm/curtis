@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "VerificationResult",
+  "type": "object",
+  "required": ["job_id", "is_valid", "validity_reason", "fixed_fields", "flags"],
+  "properties": {
+    "job_id": { "type": "string" },
+    "is_valid": { "type": "boolean" },
+    "validity_reason": { "type": "string" },
+    "fixed_fields": {
+      "type": "object",
+      "properties": {
+        "title": { "type": ["string", "null"] },
+        "employer": { "type": ["string", "null"] },
+        "location": { "type": ["string", "null"] },
+        "deadline": { "type": ["string", "null"] },
+        "url": { "type": ["string", "null"] }
+      },
+      "required": ["title", "employer", "location", "deadline", "url"]
+    },
+    "flags": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}
