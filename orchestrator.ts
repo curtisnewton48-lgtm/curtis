@@ -1,5 +1,6 @@
 import { runVerification } from "./agents/verification";
-import { Stage1Job, VerifiedJob } from "./types";
+import { runPortalAgent } from "./agents/portal_agent";
+import { MasterCV, PortalQuestion, Stage1Job, Stage2Dossier, StarBank, VerifiedJob } from "./types";
 
 export async function processStage1Jobs(jobs: Stage1Job[]): Promise<VerifiedJob[]> {
   const verifiedJobs: VerifiedJob[] = [];
@@ -27,5 +28,19 @@ function applyFixedFields(
     location: fixedFields.location ?? job.location,
     deadline: fixedFields.deadline ?? job.deadline ?? job.application_deadline,
     url: fixedFields.url ?? job.url,
+  };
+}
+
+export async function processPortalApplication(
+  questions: PortalQuestion[],
+  dossier: Stage2Dossier,
+  starBank: StarBank,
+  masterCv: MasterCV,
+) {
+  const answers = await runPortalAgent(questions, dossier, starBank, masterCv);
+
+  return {
+    status: "portal_answers_ready",
+    answers,
   };
 }
