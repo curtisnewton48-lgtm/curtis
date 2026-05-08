@@ -56,7 +56,7 @@ def load_config() -> Config:
         model_name=os.getenv("MODEL_NAME", default_model).strip(),
         stage_two_model_name=os.getenv("STAGE_TWO_MODEL_NAME", "gemini-3.1-pro-preview").strip(),
         verification_model_provider=os.getenv("VERIFICATION_MODEL_PROVIDER", "mistral").strip().lower(),
-        verification_model_name=os.getenv("VERIFICATION_MODEL_NAME", "open-mistral-7b").strip(),
+        verification_model_name=os.getenv("VERIFICATION_MODEL_NAME", "ministral-8b-2512").strip(),
         max_jobs_per_run=int(os.getenv("MAX_JOBS_PER_RUN", "20")),
         max_jobs_per_month=int(os.getenv("MAX_JOBS_PER_MONTH", "300")),
         min_fit_score=int(os.getenv("MIN_FIT_SCORE", "65")),
