@@ -1,15 +1,15 @@
 export interface Stage1Job {
   job_id: string;
-  title?: string | null;
-  employer?: string | null;
+  title: string;
+  employer: string;
   company?: string | null;
-  location?: string | null;
+  location: string;
   deadline?: string | null;
   application_deadline?: string | null;
-  url?: string | null;
+  url: string;
   description?: string | null;
-  raw_description?: string | null;
-  source?: string | null;
+  raw_description: string;
+  source: string;
   [key: string]: unknown;
 }
 
