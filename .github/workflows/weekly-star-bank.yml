@@ -2,34 +2,34 @@ name: Weekly STAR Bank Agent
 
 on:
   workflow_dispatch:
-    schedule:
-        - cron: "30 8 * * 1"
+  schedule:
+    - cron: "30 8 * * 1"
 
-        jobs:
-          run:
-              runs-on: ubuntu-latest
-                  timeout-minutes: 20
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
 
-                      steps:
-                            - uses: actions/checkout@v4
+    steps:
+      - uses: actions/checkout@v4
 
-                                  - uses: actions/setup-python@v5
-                                          with:
-                                                    python-version: "3.12"
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
 
-                                                          - name: Install dependencies
-                                                                  run: pip install -r requirements.txt
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-                                                                        - name: Generate weekly STAR bank
-                                                                                env:
-                                                                                          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-                                                                                                    GOOGLE_SHEET_ID:             ${{ secrets.GOOGLE_SHEET_ID }}
-                                                                                                              GOOGLE_RESEARCH_DOC_ID:    ${{ secrets.GOOGLE_RESEARCH_DOC_ID }}
-                                                                                                                        GOOGLE_RESEARCH_FOLDER_ID: ${{ secrets.GOOGLE_RESEARCH_FOLDER_ID }}
-                                                                                                                                  MICRO_AGENT_MODEL_PROVIDER: ${{ secrets.MICRO_AGENT_MODEL_PROVIDER || 'openai' }}
-                                                                                                                                            MICRO_AGENT_MODEL_NAME:     ${{ secrets.MICRO_AGENT_MODEL_NAME || 'gpt-4o-mini' }}
-                                                                                                                                                      OPENAI_API_KEY:  ${{ secrets.OPENAI_API_KEY }}
-                                                                                                                                                                MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
-                                                                                                                                                                          GEMINI_API_KEY:  ${{ secrets.GEMINI_API_KEY }}
-                                                                                                                                                                                    PROFILE_CONTEXT: ${{ secrets.PROFILE_CONTEXT }}
-                                                                                                                                                                                            run: python -m career_agent.star_bank
+      - name: Generate weekly STAR bank
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID:             ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_RESEARCH_DOC_ID:    ${{ secrets.GOOGLE_RESEARCH_DOC_ID }}
+          GOOGLE_RESEARCH_FOLDER_ID: ${{ secrets.GOOGLE_RESEARCH_FOLDER_ID }}
+          MICRO_AGENT_MODEL_PROVIDER: ${{ secrets.MICRO_AGENT_MODEL_PROVIDER || 'openai' }}
+          MICRO_AGENT_MODEL_NAME:     ${{ secrets.MICRO_AGENT_MODEL_NAME || 'gpt-4o-mini' }}
+          OPENAI_API_KEY:  ${{ secrets.OPENAI_API_KEY }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          GEMINI_API_KEY:  ${{ secrets.GEMINI_API_KEY }}
+          PROFILE_CONTEXT: ${{ secrets.PROFILE_CONTEXT }}
+        run: python -m career_agent.star_bank
