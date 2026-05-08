@@ -26,14 +26,20 @@ jobs:
           GOOGLE_RESEARCH_DOC_ID: ${{ secrets.GOOGLE_RESEARCH_DOC_ID }}
           GOOGLE_RESEARCH_FOLDER_ID: ${{ secrets.GOOGLE_RESEARCH_FOLDER_ID }}
           PROFILE_CONTEXT: ${{ secrets.PROFILE_CONTEXT }}
-          MODEL_PROVIDER: ${{ secrets.MODEL_PROVIDER }}
-          MODEL_NAME: ${{ secrets.MODEL_NAME }}
-          STAGE_TWO_MODEL_NAME: ${{ secrets.STAGE_TWO_MODEL_NAME }}
+          MODEL_PROVIDER: ${{ secrets.MODEL_PROVIDER || 'gemini' }}
+          MODEL_NAME: ${{ secrets.MODEL_NAME || 'gemini-3-flash-preview' }}
+          STAGE_TWO_MODEL_PROVIDER: ${{ secrets.STAGE_TWO_MODEL_PROVIDER || 'gemini' }}
+          STAGE_TWO_MODEL_NAME: ${{ secrets.STAGE_TWO_MODEL_NAME || 'gemini-3.1-pro-preview' }}
+          MICRO_AGENT_MODEL_PROVIDER: ${{ secrets.MICRO_AGENT_MODEL_PROVIDER || 'mistral' }}
+          MICRO_AGENT_MODEL_NAME: ${{ secrets.MICRO_AGENT_MODEL_NAME || 'ministral-8b-2512' }}
+          PORTAL_ANSWER_MODEL_PROVIDER: ${{ secrets.PORTAL_ANSWER_MODEL_PROVIDER || 'deepseek' }}
+          PORTAL_ANSWER_MODEL_NAME: ${{ secrets.PORTAL_ANSWER_MODEL_NAME || 'deepseek-chat' }}
           VERIFICATION_MODEL_PROVIDER: ${{ secrets.VERIFICATION_MODEL_PROVIDER || 'mistral' }}
           VERIFICATION_MODEL_NAME: ${{ secrets.VERIFICATION_MODEL_NAME || 'ministral-8b-2512' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
           ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
           ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
           REED_API_KEY: ${{ secrets.REED_API_KEY }}
