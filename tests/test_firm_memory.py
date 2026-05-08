@@ -5,8 +5,9 @@ from career_agent.sheets import normalize_company_name
 
 
 class FakeStore:
-    def __init__(self) -> None:
+    def __init__(self, memory: dict[str, str] | None = None) -> None:
         self.appended_jobs = []
+        self.memory = memory if memory is not None else {"acme": "https://docs.google.com/document/d/existing/edit"}
 
     def profile(self) -> dict[str, str]:
         return {"name": "Curtis Newton"}
@@ -18,7 +19,7 @@ class FakeStore:
         return set()
 
     def research_memory_by_company(self) -> dict[str, str]:
-        return {"acme": "https://docs.google.com/document/d/existing/edit"}
+        return self.memory
 
     def current_month_job_count(self) -> int:
         return 0
@@ -28,6 +29,9 @@ class FakeStore:
 
 
 class FakeModel:
+    def __init__(self) -> None:
+        self.deep_research_calls = 0
+
     def score_job(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
         return SimpleNamespace(
             score=50,
@@ -70,12 +74,20 @@ class FakeModel:
         )
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
-        raise AssertionError("Deep research should not run when firm memory exists.")
+        self.deep_research_calls += 1
+        return SimpleNamespace(
+            title="Acme LLP - Immigration Paralegal Research",
+            content="Comprehensive firm research for Acme LLP.",
+        )
 
 
 class FakeDocs:
+    def __init__(self) -> None:
+        self.created_docs = []
+
     def create_research_doc(self, title: str, content: str) -> str:
-        raise AssertionError("Research doc should not be created when firm memory exists.")
+        self.created_docs.append({"title": title, "content": content})
+        return "https://docs.google.com/document/d/new/edit"
 
 
 class MemoryAgent(CareerSearchAgent):
@@ -108,10 +120,33 @@ def test_normalize_company_name_removes_common_suffixes() -> None:
 
 def test_stage_two_reuses_existing_firm_research_doc() -> None:
     store = FakeStore()
-    agent = MemoryAgent(_config(), store, FakeModel(), FakeModel(), FakeDocs())
+    stage_two_model = FakeModel()
+    docs = FakeDocs()
+    agent = MemoryAgent(_config(), store, FakeModel(), stage_two_model, docs)
 
     result = agent.run()
 
     assert result["shortlisted_for_stage_two"] == 1
     assert store.appended_jobs[0]["research_doc_url"] == "https://docs.google.com/document/d/existing/edit"
     assert "reused existing research document" in store.appended_jobs[0]["risks"]
+    assert stage_two_model.deep_research_calls == 0
+    assert docs.created_docs == []
+
+
+def test_stage_two_creates_research_doc_when_no_memory_exists() -> None:
+    store = FakeStore(memory={})
+    stage_two_model = FakeModel()
+    docs = FakeDocs()
+    agent = MemoryAgent(_config(), store, FakeModel(), stage_two_model, docs)
+
+    result = agent.run()
+
+    assert result["shortlisted_for_stage_two"] == 1
+    assert stage_two_model.deep_research_calls == 1
+    assert docs.created_docs == [
+        {
+            "title": "Acme LLP - Immigration Paralegal Research",
+            "content": "Comprehensive firm research for Acme LLP.",
+        }
+    ]
+    assert store.appended_jobs[0]["research_doc_url"] == "https://docs.google.com/document/d/new/edit"
