@@ -50,9 +50,25 @@ export interface PortalAnswers {
 }
 
 export interface Stage2Dossier {
-  culture?: unknown;
-  competencies?: unknown;
-  application_strategy?: unknown;
+  job_id: string;
+  firm_name: string;
+  role_title: string;
+  culture: string;
+  values: string;
+  training: string;
+  recruitment: string;
+  commercial_awareness: string;
+  practice_areas: string;
+  clients: string;
+  risks: string;
+  application_strategy: string;
+  interview_strategy: string;
+  competency_mapping: string;
+  tone_guidance: string;
+  [key: string]: unknown;
+}
+
+export interface CvOutput {
   [key: string]: unknown;
 }
 
