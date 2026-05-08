@@ -83,6 +83,72 @@ class SheetsStore:
                 memory[key] = research_url
         return memory
 
+    def stage_two_retry_jobs(self, limit: int) -> list[dict[str, str]]:
+        if limit <= 0:
+            return []
+        rows = self.values("Jobs!A2:Y5000")
+        jobs_by_id_with_research = {
+            row[0]
+            for row in rows
+            if len(row) > 22 and row[0] and row[22]
+        }
+        companies_with_research = {
+            normalize_company_name(row[2])
+            for row in rows
+            if len(row) > 22 and row[2] and row[22]
+        }
+        retry_jobs = []
+        seen = set()
+        for row in reversed(rows):
+            padded = row + [""] * (25 - len(row))
+            job_id = padded[0]
+            company_key = normalize_company_name(padded[2])
+            risks = padded[18]
+            if not job_id or job_id in seen:
+                continue
+            seen.add(job_id)
+            if job_id in jobs_by_id_with_research or company_key in companies_with_research:
+                continue
+            if padded[10] != "processing_error":
+                continue
+            if padded[22]:
+                continue
+            if "Stage 2 research failed" not in risks:
+                continue
+            if "Verification: accepted=True" not in risks:
+                continue
+            retry_jobs.append(
+                {
+                    "job_id": job_id,
+                    "title": padded[1],
+                    "company": padded[2],
+                    "location": padded[3],
+                    "remote": padded[4],
+                    "salary": padded[5],
+                    "url": padded[6],
+                    "date_posted": padded[7],
+                    "found_at": padded[8],
+                    "source": padded[9],
+                    "status": "stage_two_retry",
+                    "fit_score": padded[11],
+                    "role_type": padded[12],
+                    "practice_area": padded[13],
+                    "application_deadline": padded[14],
+                    "deadline_status": padded[15],
+                    "eligibility": padded[16],
+                    "fit_summary": padded[17],
+                    "risks": _append_retry_note(risks),
+                    "recommended_action": padded[19],
+                    "tailored_pitch": padded[20],
+                    "shortlisted": "yes",
+                    "research_doc_url": "",
+                    "raw_description": padded[23],
+                }
+            )
+            if len(retry_jobs) >= limit:
+                break
+        return retry_jobs
+
     def current_month_job_count(self) -> int:
         now = datetime.now(timezone.utc)
         rows = self.values("Jobs!A2:Z5000")
@@ -231,6 +297,15 @@ def _research_entry(job: dict[str, Any]) -> str:
         f"Research: {job.get('firm_research', '')}\n"
         f"Fit summary: {job.get('fit_summary', '')}\n"
     )
+
+
+def _append_retry_note(value: str) -> str:
+    note = "Stage 2 retry: retrying prior verified research failure."
+    if not value:
+        return note
+    if note in value:
+        return value
+    return f"{value} | {note}"
 
 
 def _is_same_utc_month(value: str, now: datetime) -> bool:
