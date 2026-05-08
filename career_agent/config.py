@@ -13,9 +13,12 @@ class Config:
     google_research_folder_id: str
     model_provider: str
     model_name: str
+    stage_two_model_provider: str
     stage_two_model_name: str
     micro_agent_model_provider: str
     micro_agent_model_name: str
+    portal_answer_model_provider: str
+    portal_answer_model_name: str
     verification_model_provider: str
     verification_model_name: str
     max_jobs_per_run: int
@@ -56,9 +59,12 @@ def load_config() -> Config:
         google_research_folder_id=research_folder_id,
         model_provider=provider,
         model_name=os.getenv("MODEL_NAME", default_model).strip(),
+        stage_two_model_provider=os.getenv("STAGE_TWO_MODEL_PROVIDER", "gemini").strip().lower(),
         stage_two_model_name=os.getenv("STAGE_TWO_MODEL_NAME", "gemini-3.1-pro-preview").strip(),
         micro_agent_model_provider=os.getenv("MICRO_AGENT_MODEL_PROVIDER", "mistral").strip().lower(),
         micro_agent_model_name=os.getenv("MICRO_AGENT_MODEL_NAME", "ministral-8b-2512").strip(),
+        portal_answer_model_provider=os.getenv("PORTAL_ANSWER_MODEL_PROVIDER", "deepseek").strip().lower(),
+        portal_answer_model_name=os.getenv("PORTAL_ANSWER_MODEL_NAME", "deepseek-chat").strip(),
         verification_model_provider=os.getenv("VERIFICATION_MODEL_PROVIDER", "mistral").strip().lower(),
         verification_model_name=os.getenv("VERIFICATION_MODEL_NAME", "ministral-8b-2512").strip(),
         max_jobs_per_run=int(os.getenv("MAX_JOBS_PER_RUN", "20")),
