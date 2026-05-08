@@ -33,7 +33,7 @@ jobs:
           MICRO_AGENT_MODEL_PROVIDER: ${{ secrets.MICRO_AGENT_MODEL_PROVIDER || 'mistral' }}
           MICRO_AGENT_MODEL_NAME: ${{ secrets.MICRO_AGENT_MODEL_NAME || 'ministral-8b-2512' }}
           PORTAL_ANSWER_MODEL_PROVIDER: ${{ secrets.PORTAL_ANSWER_MODEL_PROVIDER || 'deepseek' }}
-          PORTAL_ANSWER_MODEL_NAME: ${{ secrets.PORTAL_ANSWER_MODEL_NAME || 'deepseek-chat' }}
+          PORTAL_ANSWER_MODEL_NAME: ${{ secrets.PORTAL_ANSWER_MODEL_NAME || 'deepseek-v4-pro' }}
           VERIFICATION_MODEL_PROVIDER: ${{ secrets.VERIFICATION_MODEL_PROVIDER || 'mistral' }}
           VERIFICATION_MODEL_NAME: ${{ secrets.VERIFICATION_MODEL_NAME || 'ministral-8b-2512' }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
