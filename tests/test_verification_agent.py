@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 from career_agent.agent import CareerSearchAgent
+from career_agent.models import JobVerification
 
 
 class FakeStore:
@@ -141,3 +142,28 @@ def test_verification_error_does_not_fail_whole_run() -> None:
     assert result["shortlisted_for_stage_two"] == 0
     assert store.appended_jobs[0]["status"] == "processing_error"
     assert "Verification micro-agent failed" in store.appended_jobs[0]["risks"]
+
+
+def test_job_verification_accepts_mistral_style_messy_json() -> None:
+    verification = JobVerification.model_validate(
+        {
+            "is_real_job": True,
+            "deadline_correct": True,
+            "location_correct": True,
+            "salary_experience_accurate": True,
+            "firm_exists": True,
+            "job_still_open": True,
+            "accept_for_stage_two": True,
+            "confidence": 0.95,
+            "corrected_deadline": None,
+            "corrected_location": "not stated",
+            "corrected_salary_or_experience": "not stated",
+            "evidence": {"job_exists": {"status": "verified"}},
+            "risks": [{"risk": "deadline should be confirmed"}],
+        }
+    )
+
+    assert verification.confidence == 95
+    assert verification.corrected_deadline == "not stated"
+    assert "job_exists" in verification.evidence
+    assert "deadline should be confirmed" in verification.risks
