@@ -1,3 +1,4 @@
+import { runStage1 } from "./agents/stage1";
 import { runVerification } from "./agents/verification";
 import { runPortalAgent } from "./agents/portal_agent";
 import { runStage2 } from "./agents/stage2";
@@ -25,9 +26,9 @@ function applyFixedFields(
   return {
     ...job,
     title: fixedFields.title ?? job.title,
-    employer: fixedFields.employer ?? job.employer ?? job.company,
+    employer: fixedFields.employer ?? job.employer,
     location: fixedFields.location ?? job.location,
-    deadline: fixedFields.deadline ?? job.deadline ?? job.application_deadline,
+    ...(fixedFields.deadline ? { deadline: fixedFields.deadline } : {}),
     url: fixedFields.url ?? job.url,
   };
 }
@@ -71,13 +72,6 @@ export async function processJob(rawJob: string, masterCv: MasterCV) {
     dossier,
     cv,
   };
-}
-
-async function runStage1(rawJobs: string[]): Promise<Stage1Job[]> {
-  return rawJobs.map((rawJob, index) => ({
-    job_id: `raw-${index + 1}`,
-    raw_description: rawJob,
-  }));
 }
 
 async function runCvAgent(masterCv: MasterCV, dossier: Stage2Dossier): Promise<CvOutput> {
