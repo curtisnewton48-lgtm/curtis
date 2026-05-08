@@ -1,0 +1,30 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PortalAnswers",
+  "type": "object",
+  "required": ["answers"],
+  "properties": {
+    "answers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "question",
+          "answer",
+          "word_count",
+          "competency",
+          "star_source",
+          "notes"
+        ],
+        "properties": {
+          "question": { "type": "string" },
+          "answer": { "type": "string" },
+          "word_count": { "type": "number" },
+          "competency": { "type": "string" },
+          "star_source": { "type": "string" },
+          "notes": { "type": "string" }
+        }
+      }
+    }
+  }
+}
