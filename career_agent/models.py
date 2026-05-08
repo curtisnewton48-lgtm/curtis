@@ -37,6 +37,17 @@ class FirmResearch(BaseModel):
     content: str
 
 
+class TailoredCV(BaseModel):
+    title: str
+    content: str
+    ats_keywords: list[str] = []
+
+
+class STARBank(BaseModel):
+    title: str
+    content: str
+
+
 class JobVerification(BaseModel):
     is_real_job: bool
     deadline_correct: bool
@@ -94,6 +105,12 @@ class ModelClient(Protocol):
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         ...
 
+    def tailor_cv(self, profile: dict[str, str], job: dict[str, str]) -> TailoredCV:
+        ...
+
+    def generate_star_bank(self, profile: dict[str, str], jobs: list[dict[str, str]]) -> STARBank:
+        ...
+
 
 STAGE_ONE_PROMPT = """You are Stage 1 of a UK legal career-search agent.
 Extract and triage paralegal, trainee solicitor, and legal caseworker roles.
@@ -111,7 +128,8 @@ Return only valid JSON with keys: score, role_type, role_level, practice_area, p
 STAGE_TWO_PROMPT = """You are Stage 2 of a UK legal career-search agent for Curtis Newton, a first-class law graduate.
 Create a comprehensive, application-ready firm and role research dossier for a shortlisted UK legal job. Use supplied job context and web-grounded information available to the model/tool. Do not invent facts; write "not found" where evidence is unavailable.
 The dossier must be detailed enough that a strong 2026 legal applicant can use it without further routine research before tailoring a CV, cover letter, application form, or interview preparation.
-Write in clear sections with concise but substantive notes, not vague summaries. Include practical application angles tied to Curtis's profile where possible.
+Write in clear sections with detailed, substantive notes, not vague summaries. Include practical application angles tied to Curtis's profile where possible.
+Go beyond the minimum checklist by adding market context, likely commercial/legal awareness angles, competitor/comparator firms, likely interview themes, credibility signals, risks/unknowns, and a "how to win this application" section.
 At minimum cover:
 1. Role snapshot: role title, firm/organisation, location, working pattern, salary, deadline, source URL, application route, and eligibility caveats.
 2. Why this role is shortlisted: practice-area fit, candidate evidence fit, risks, and how Curtis should position himself.
@@ -127,6 +145,32 @@ At minimum cover:
 12. Reviews and reputation: Chambers/Legal 500/RollOnFriday/Glassdoor/Indeed/student forums where available, noting reliability and uncertainty.
 13. Application strategy: a short tailored pitch, 5 CV/cover-letter keywords, 5 interview talking points, and 5 questions Curtis could ask them.
 14. Verification notes: what should be manually checked before applying, especially deadline, eligibility, salary, and application portal.
+15. Top-candidate preparation pack: 10 highly specific facts to memorise, 5 firm-specific motivations, 5 legal/commercial awareness hooks, and 5 examples of how Curtis's background can be framed.
+Return only valid JSON with keys: title, content."""
+
+CV_TAILORING_PROMPT = """You are a CV-tailoring micro-agent for Curtis Newton, a UK first-class law graduate.
+Create a tailored legal CV draft for the supplied shortlisted role. Use only the supplied profile/CV context and job context. Do not invent experience, employment, grades, institutions, dates, awards, or languages.
+The output must be useful enough to remove the manual CV-tailoring bottleneck.
+Extract ATS keywords from the role and firm context, then rewrite CV bullets so they honestly align Curtis's evidence with the role.
+If the profile lacks detail, use bracketed prompts such as [insert exact example] rather than inventing facts.
+Include:
+1. ATS keyword bank grouped by legal practice, skills, tools/processes, client/service, and values.
+2. Tailored profile summary.
+3. Education section preserving known facts.
+4. Experience section with rewritten bullet options, using action verbs and measurable/legal relevance where evidence exists.
+5. Skills section tailored to the role.
+6. Languages section.
+7. Optional additional section suggestions.
+8. A "do not claim unless true" warning list.
+9. Final one-page CV draft in clean UK legal graduate format.
+Return only valid JSON with keys: title, content, ats_keywords."""
+
+STAR_BANK_PROMPT = """You are a STAR-bank generator for Curtis Newton, a UK first-class law graduate applying for legal graduate, paralegal, caseworker, and trainee solicitor roles.
+Generate 20 to 30 STAR competency answers from the supplied profile and recent shortlisted job context. Do not invent facts. If a missing detail is needed, mark it as [add specific real example].
+Categorise answers by competency and make them suitable for 2026 UK legal graduate applications and interviews.
+Include competencies such as client care, teamwork, leadership, resilience, attention to detail, commercial awareness, legal research, written communication, advocacy/persuasion, ethics, confidentiality, diversity/inclusion, technology/AI, organisation, conflict handling, initiative, empathy, and motivation for law.
+For each STAR answer include: competency, likely interview question, Situation, Task, Action, Result, legal relevance, stronger wording to use, and risk/check before using.
+Also include a quick index mapping competencies to answer numbers.
 Return only valid JSON with keys: title, content."""
 
 VERIFICATION_PROMPT = """You are a cheap verification micro-agent for a UK legal career-search system.
@@ -156,6 +200,21 @@ def build_user_prompt(profile: dict[str, str], job: dict[str, str]) -> str:
                 "75_89": "Strong match, apply if interested.",
                 "60_74": "Possible match, review manually.",
                 "0_59": "Weak match or clear mismatch.",
+            },
+        },
+        ensure_ascii=True,
+    )
+
+
+def build_star_bank_prompt(profile: dict[str, str], jobs: list[dict[str, str]]) -> str:
+    return json.dumps(
+        {
+            "profile": profile,
+            "recent_shortlisted_jobs": jobs[:10],
+            "output_requirements": {
+                "answer_count": "20-30",
+                "format": "Categorised STAR answer bank for UK legal graduate applications.",
+                "truthfulness": "Do not invent facts; use bracketed prompts for missing evidence.",
             },
         },
         ensure_ascii=True,
@@ -226,6 +285,44 @@ class OpenAIModelClient:
         output_text = payload.get("output_text") or _extract_openai_output_text(payload)
         return FirmResearch.model_validate_json(output_text)
 
+    def tailor_cv(self, profile: dict[str, str], job: dict[str, str]) -> TailoredCV:
+        response = httpx.post(
+            "https://api.openai.com/v1/responses",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "input": [
+                    {"role": "system", "content": CV_TAILORING_PROMPT},
+                    {"role": "user", "content": build_user_prompt(profile, job)},
+                ],
+                "text": {"format": {"type": "json_object"}},
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        output_text = payload.get("output_text") or _extract_openai_output_text(payload)
+        return TailoredCV.model_validate_json(output_text)
+
+    def generate_star_bank(self, profile: dict[str, str], jobs: list[dict[str, str]]) -> STARBank:
+        response = httpx.post(
+            "https://api.openai.com/v1/responses",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "input": [
+                    {"role": "system", "content": STAR_BANK_PROMPT},
+                    {"role": "user", "content": build_star_bank_prompt(profile, jobs)},
+                ],
+                "text": {"format": {"type": "json_object"}},
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        output_text = payload.get("output_text") or _extract_openai_output_text(payload)
+        return STARBank.model_validate_json(output_text)
+
 
 class MistralModelClient:
     def __init__(self, model: str) -> None:
@@ -294,6 +391,46 @@ class MistralModelClient:
             content = json.dumps(content, ensure_ascii=True)
         return FirmResearch.model_validate_json(content)
 
+    def tailor_cv(self, profile: dict[str, str], job: dict[str, str]) -> TailoredCV:
+        response = httpx.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": CV_TAILORING_PROMPT},
+                    {"role": "user", "content": build_user_prompt(profile, job)},
+                ],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        if not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=True)
+        return TailoredCV.model_validate_json(content)
+
+    def generate_star_bank(self, profile: dict[str, str], jobs: list[dict[str, str]]) -> STARBank:
+        response = httpx.post(
+            "https://api.mistral.ai/v1/chat/completions",
+            headers={"Authorization": f"Bearer {self.api_key}"},
+            json={
+                "model": self.model,
+                "messages": [
+                    {"role": "system", "content": STAR_BANK_PROMPT},
+                    {"role": "user", "content": build_star_bank_prompt(profile, jobs)},
+                ],
+                "response_format": {"type": "json_object"},
+            },
+            timeout=120,
+        )
+        response.raise_for_status()
+        content = response.json()["choices"][0]["message"]["content"]
+        if not isinstance(content, str):
+            content = json.dumps(content, ensure_ascii=True)
+        return STARBank.model_validate_json(content)
+
 
 class GeminiModelClient:
     def __init__(self, model: str) -> None:
@@ -313,6 +450,14 @@ class GeminiModelClient:
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         content = self._generate_json(STAGE_TWO_PROMPT, build_user_prompt(profile, job))
         return FirmResearch.model_validate_json(_json_object_text(content))
+
+    def tailor_cv(self, profile: dict[str, str], job: dict[str, str]) -> TailoredCV:
+        content = self._generate_json(CV_TAILORING_PROMPT, build_user_prompt(profile, job))
+        return TailoredCV.model_validate_json(_json_object_text(content))
+
+    def generate_star_bank(self, profile: dict[str, str], jobs: list[dict[str, str]]) -> STARBank:
+        content = self._generate_json(STAR_BANK_PROMPT, build_star_bank_prompt(profile, jobs))
+        return STARBank.model_validate_json(_json_object_text(content))
 
     def _generate_json(self, system_prompt: str, user_prompt: str) -> str:
         response = httpx.post(
