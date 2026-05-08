@@ -64,7 +64,7 @@ def load_config() -> Config:
         micro_agent_model_provider=os.getenv("MICRO_AGENT_MODEL_PROVIDER", "mistral").strip().lower(),
         micro_agent_model_name=os.getenv("MICRO_AGENT_MODEL_NAME", "ministral-8b-2512").strip(),
         portal_answer_model_provider=os.getenv("PORTAL_ANSWER_MODEL_PROVIDER", "deepseek").strip().lower(),
-        portal_answer_model_name=os.getenv("PORTAL_ANSWER_MODEL_NAME", "deepseek-chat").strip(),
+        portal_answer_model_name=os.getenv("PORTAL_ANSWER_MODEL_NAME", "deepseek-v4-pro").strip(),
         verification_model_provider=os.getenv("VERIFICATION_MODEL_PROVIDER", "mistral").strip().lower(),
         verification_model_name=os.getenv("VERIFICATION_MODEL_NAME", "ministral-8b-2512").strip(),
         max_jobs_per_run=int(os.getenv("MAX_JOBS_PER_RUN", "20")),
