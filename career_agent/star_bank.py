@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+
 from career_agent.config import load_config
 from career_agent.models import create_model_client
 from career_agent.sheets import DocsStore, SheetsStore
@@ -16,10 +18,9 @@ def main() -> None:
     if not docs:
         raise RuntimeError("GOOGLE_RESEARCH_DOC_ID or GOOGLE_RESEARCH_FOLDER_ID is required.")
 
-    model = create_model_client(
-        config.micro_agent_model_provider,
-        config.micro_agent_model_name,
-    )
+    provider = os.getenv("STAR_BANK_MODEL_PROVIDER", config.micro_agent_model_provider).strip().lower()
+    model_name = os.getenv("STAR_BANK_MODEL_NAME", config.micro_agent_model_name).strip()
+    model = create_model_client(provider, model_name)
     star_bank = model.generate_star_bank(store.profile(), [])
     url = docs.create_support_doc(star_bank.title, star_bank.content)
     print({"star_bank_url": url})
