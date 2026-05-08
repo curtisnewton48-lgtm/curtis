@@ -8,6 +8,7 @@ class FakeStore:
     def __init__(self, memory: dict[str, str] | None = None) -> None:
         self.appended_jobs = []
         self.memory = memory if memory is not None else {"acme": "https://docs.google.com/document/d/existing/edit"}
+        self.retry_jobs = []
 
     def profile(self) -> dict[str, str]:
         return {"name": "Curtis Newton"}
@@ -23,6 +24,9 @@ class FakeStore:
 
     def current_month_job_count(self) -> int:
         return 0
+
+    def stage_two_retry_jobs(self, limit: int) -> list[dict[str, str]]:
+        return self.retry_jobs[:limit]
 
     def append_jobs(self, jobs: list[dict[str, str]]) -> None:
         self.appended_jobs = jobs
@@ -104,6 +108,11 @@ class MemoryAgent(CareerSearchAgent):
         ]
 
 
+class RetryOnlyAgent(CareerSearchAgent):
+    def _discover(self, companies: list[dict[str, str]]) -> list[dict[str, str]]:
+        return []
+
+
 def _config() -> SimpleNamespace:
     return SimpleNamespace(
         max_jobs_per_month=300,
@@ -149,4 +158,44 @@ def test_stage_two_creates_research_doc_when_no_memory_exists() -> None:
             "content": "Comprehensive firm research for Acme LLP.",
         }
     ]
+    assert store.appended_jobs[0]["research_doc_url"] == "https://docs.google.com/document/d/new/edit"
+
+
+def test_stage_two_retry_job_runs_research_without_rediscovery() -> None:
+    store = FakeStore(memory={})
+    store.retry_jobs = [
+        {
+            "job_id": "failed-job-1",
+            "title": "Shelter Paralegal",
+            "company": "Shelter",
+            "location": "Birmingham",
+            "salary": "GBP 28639",
+            "url": "https://example.com/shelter",
+            "source": "test",
+            "status": "stage_two_retry",
+            "fit_score": "88",
+            "role_type": "paralegal",
+            "practice_area": "housing law",
+            "application_deadline": "not stated",
+            "deadline_status": "not_stated",
+            "eligibility": "probably eligible",
+            "fit_summary": "Strong housing law match.",
+            "risks": "Verification: accepted=True | Stage 2 retry: retrying prior verified research failure.",
+            "recommended_action": "Apply.",
+            "tailored_pitch": "Housing law fit.",
+            "shortlisted": "yes",
+            "research_doc_url": "",
+            "raw_description": "Shelter paralegal role.",
+        }
+    ]
+    stage_two_model = FakeModel()
+    docs = FakeDocs()
+    agent = RetryOnlyAgent(_config(), store, FakeModel(), stage_two_model, docs)
+
+    result = agent.run()
+
+    assert result["stage_two_retries"] == 1
+    assert stage_two_model.deep_research_calls == 1
+    assert store.appended_jobs[0]["job_id"] == "failed-job-1"
+    assert store.appended_jobs[0]["status"] == "shortlisted"
     assert store.appended_jobs[0]["research_doc_url"] == "https://docs.google.com/document/d/new/edit"
