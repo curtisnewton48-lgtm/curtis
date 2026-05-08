@@ -72,6 +72,25 @@ class BlockingVerificationModel:
         )
 
 
+class FixedTermLocationCorrectionVerificationModel:
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
+        return SimpleNamespace(
+            is_real_job=True,
+            deadline_correct=False,
+            location_correct=False,
+            salary_experience_accurate=True,
+            firm_exists=True,
+            job_still_open=False,
+            accept_for_stage_two=False,
+            confidence=95,
+            corrected_deadline="not stated",
+            corrected_location="Home-based",
+            corrected_salary_or_experience="not stated",
+            evidence="The date is a fixed-term contract end date, not an application deadline.",
+            risks="Home-based location correction; fixed-term contract until 31/03/2027.",
+        )
+
+
 class FailingVerificationModel:
     def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
         raise RuntimeError("Mistral API unavailable")
@@ -142,6 +161,25 @@ def test_verification_error_does_not_fail_whole_run() -> None:
     assert result["shortlisted_for_stage_two"] == 0
     assert store.appended_jobs[0]["status"] == "processing_error"
     assert "Verification micro-agent failed" in store.appended_jobs[0]["risks"]
+
+
+def test_fixed_term_contract_date_does_not_block_stage_two() -> None:
+    store = FakeStore()
+    agent = VerificationAgent(
+        _config(),
+        store,
+        ScoringModel(),
+        ScoringModel(),
+        None,
+        FixedTermLocationCorrectionVerificationModel(),
+    )
+
+    result = agent.run()
+
+    assert result["shortlisted_for_stage_two"] == 1
+    assert store.appended_jobs[0]["shortlisted"] == "yes"
+    assert store.appended_jobs[0]["location"] == "Home-based"
+    assert "System override" in store.appended_jobs[0]["risks"]
 
 
 def test_job_verification_accepts_mistral_style_messy_json() -> None:
