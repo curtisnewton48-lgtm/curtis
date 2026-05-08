@@ -71,6 +71,11 @@ class BlockingVerificationModel:
         )
 
 
+class FailingVerificationModel:
+    def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> SimpleNamespace:
+        raise RuntimeError("Mistral API unavailable")
+
+
 class FakeDocs:
     def create_research_doc(self, title: str, content: str) -> str:
         raise AssertionError("Stage 2 research should not run when verification blocks the job.")
@@ -117,3 +122,22 @@ def test_verification_blocks_stage_two_research() -> None:
     assert store.appended_jobs[0]["shortlisted"] == "no"
     assert "Blocked by verification micro-agent" in store.appended_jobs[0]["stage_two_reason"]
     assert "Verification: accepted=False" in store.appended_jobs[0]["risks"]
+
+
+def test_verification_error_does_not_fail_whole_run() -> None:
+    store = FakeStore()
+    agent = VerificationAgent(
+        _config(),
+        store,
+        ScoringModel(),
+        ScoringModel(),
+        FakeDocs(),
+        FailingVerificationModel(),
+    )
+
+    result = agent.run()
+
+    assert result["new_jobs_scored"] == 1
+    assert result["shortlisted_for_stage_two"] == 0
+    assert store.appended_jobs[0]["status"] == "processing_error"
+    assert "Verification micro-agent failed" in store.appended_jobs[0]["risks"]
