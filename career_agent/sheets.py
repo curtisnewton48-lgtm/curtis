@@ -242,7 +242,10 @@ class DocsStore:
 
     def create_research_doc(self, title: str, content: str) -> str:
         if self.document_id:
-            return self._append_to_master_research_doc(title, content)
+            try:
+                return self._add_master_research_tab(title, content)
+            except Exception:
+                return self._append_to_master_research_doc(title, content)
 
         metadata: dict[str, Any] = {
             "name": _safe_title(title),
@@ -285,6 +288,45 @@ class DocsStore:
         ).execute()
         return f"https://docs.google.com/document/d/{self.document_id}/edit"
 
+    def _add_master_research_tab(self, title: str, content: str) -> str:
+        tab_title = _safe_tab_title(title)
+        response = self.service.documents().batchUpdate(
+            documentId=self.document_id,
+            body={
+                "requests": [
+                    {
+                        "addDocumentTab": {
+                            "tabProperties": {
+                                "title": tab_title,
+                            }
+                        }
+                    }
+                ]
+            },
+        ).execute()
+        tab_id = (
+            response.get("replies", [{}])[0]
+            .get("addDocumentTab", {})
+            .get("tabProperties", {})
+            .get("tabId", "")
+        )
+        if not tab_id:
+            raise RuntimeError("Google Docs did not return a tab ID.")
+        self.service.documents().batchUpdate(
+            documentId=self.document_id,
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": 1, "tabId": tab_id},
+                            "text": f"{tab_title}\n\n{content}",
+                        }
+                    }
+                ]
+            },
+        ).execute()
+        return f"https://docs.google.com/document/d/{self.document_id}/edit?tab={tab_id}"
+
 
 def _research_entry(job: dict[str, Any]) -> str:
     return (
@@ -324,6 +366,12 @@ def _is_same_utc_month(value: str, now: datetime) -> bool:
 def _safe_title(title: str) -> str:
     cleaned = "".join(char if char not in r'\/:*?"<>|' else "-" for char in title)
     return cleaned[:180] or "Career Agent Firm Research"
+
+
+def _safe_tab_title(title: str) -> str:
+    cleaned = _safe_title(title)
+    cleaned = re.sub(r"\s+", " ", cleaned).strip()
+    return cleaned[:100] or "Firm Research"
 
 
 def normalize_company_name(company: str) -> str:
