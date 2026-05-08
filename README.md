@@ -20,7 +20,7 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 - Uses Gemini 3 Flash to extract role title, location, salary, deadline, requirements, eligibility, practice area, and first-pass fit score.
 - Writes application-tracking fields to the `Jobs` tab.
 - Shortlists active jobs in target practice areas.
-- Runs a cheap Mistral 7B verification micro-agent before Stage 2 accepts a job.
+- Runs a cheap Mistral/Ministral verification micro-agent before Stage 2 accepts a job.
 - Reuses existing firm research docs when a later shortlisted job is from the same firm.
 - Creates one comprehensive Google Doc per shortlisted firm/job for Stage 2 deep research.
 - Leaves applications and outbound messages under human approval.
@@ -72,7 +72,7 @@ MODEL_PROVIDER=gemini
 MODEL_NAME=gemini-3-flash-preview
 STAGE_TWO_MODEL_NAME=gemini-3.1-pro-preview
 VERIFICATION_MODEL_PROVIDER=mistral
-VERIFICATION_MODEL_NAME=open-mistral-7b
+VERIFICATION_MODEL_NAME=ministral-8b-2512
 GOOGLE_SHEET_ID=1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c
 MAX_JOBS_PER_RUN=20
 MAX_JOBS_PER_MONTH=300
