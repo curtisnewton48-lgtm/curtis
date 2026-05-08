@@ -54,7 +54,12 @@ class CareerSearchAgent:
 
         scored = []
         for job in fresh_jobs:
-            fit = self.model.score_job(profile, job)
+            try:
+                fit = self.model.score_job(profile, job)
+            except Exception as exc:
+                _mark_processing_error(job, "Stage 1 scoring failed", exc)
+                scored.append(job)
+                continue
             job["fit_score"] = fit.score
             job["role_type"] = fit.role_type
             job["practice_area"] = fit.practice_area
@@ -74,10 +79,15 @@ class CareerSearchAgent:
             job["shortlisted"] = "yes" if self._is_stage_two_candidate(job) else "no"
 
             if job["shortlisted"] == "yes" and self.verification_model:
-                verification = self.verification_model.verify_job(profile, job)
-                _apply_verification(job, verification)
-                if not verification.accept_for_stage_two:
+                try:
+                    verification = self.verification_model.verify_job(profile, job)
+                except Exception as exc:
+                    _mark_processing_error(job, "Verification micro-agent failed", exc)
                     job["shortlisted"] = "no"
+                else:
+                    _apply_verification(job, verification)
+                    if not verification.accept_for_stage_two:
+                        job["shortlisted"] = "no"
 
             if job["shortlisted"] == "yes" and self.docs:
                 firm_key = normalize_company_name(job.get("company", ""))
@@ -89,17 +99,23 @@ class CareerSearchAgent:
                         "Firm research memory: reused existing research document.",
                     )
                 else:
-                    research = self.stage_two_model.deep_research(profile, job)
-                    job["research_doc_url"] = self.docs.create_research_doc(
-                        research.title,
-                        research.content,
-                    )
-                    if firm_key and job["research_doc_url"]:
-                        firm_research_memory[firm_key] = job["research_doc_url"]
+                    try:
+                        research = self.stage_two_model.deep_research(profile, job)
+                        job["research_doc_url"] = self.docs.create_research_doc(
+                            research.title,
+                            research.content,
+                        )
+                    except Exception as exc:
+                        _mark_processing_error(job, "Stage 2 research failed", exc)
+                    else:
+                        if firm_key and job["research_doc_url"]:
+                            firm_research_memory[firm_key] = job["research_doc_url"]
 
             job.update(
                 {
-                    "status": "shortlisted"
+                    "status": "processing_error"
+                    if job.get("status") == "processing_error"
+                    else "shortlisted"
                     if job["shortlisted"] == "yes"
                     else "review"
                     if fit.score >= self.config.min_fit_score
@@ -123,32 +139,39 @@ class CareerSearchAgent:
         }
 
     def _discover(self, companies: list[dict[str, str]]) -> list[dict[str, str]]:
-        jobs = fetch_adzuna_jobs(
+        jobs: list[dict[str, str]] = []
+        _extend_source(
+            jobs,
+            "adzuna",
+            fetch_adzuna_jobs,
             queries=self.config.job_queries,
             country=self.config.adzuna_country,
             where=self.config.adzuna_where,
             results_per_query=self.config.adzuna_results_per_query,
         )
-        jobs.extend(
-            fetch_reed_jobs(
-                queries=self.config.job_queries,
-                location=self.config.reed_location,
-                results_per_query=self.config.reed_results_per_query,
-            )
+        _extend_source(
+            jobs,
+            "reed",
+            fetch_reed_jobs,
+            queries=self.config.job_queries,
+            location=self.config.reed_location,
+            results_per_query=self.config.reed_results_per_query,
         )
-        jobs.extend(
-            fetch_google_search_jobs(
-                queries=self.config.job_queries,
-                sites=self.config.google_search_sites,
-                results_per_site=self.config.google_search_results_per_site,
-            )
+        _extend_source(
+            jobs,
+            "google_search",
+            fetch_google_search_jobs,
+            queries=self.config.job_queries,
+            sites=self.config.google_search_sites,
+            results_per_site=self.config.google_search_results_per_site,
         )
-        jobs.extend(
-            fetch_brave_search_jobs(
-                queries=self.config.job_queries,
-                sites=self.config.brave_search_sites,
-                results_per_site=self.config.brave_search_results_per_site,
-            )
+        _extend_source(
+            jobs,
+            "brave_search",
+            fetch_brave_search_jobs,
+            queries=self.config.job_queries,
+            sites=self.config.brave_search_sites,
+            results_per_site=self.config.brave_search_results_per_site,
         )
         with ThreadPoolExecutor(max_workers=6) as executor:
             futures = [executor.submit(fetch_jobs_for_company, company) for company in companies]
@@ -237,6 +260,38 @@ def _append_note(value: str, note: str) -> str:
     if note in value:
         return value
     return f"{value} | {note}"
+
+
+def _extend_source(jobs: list[dict[str, str]], source: str, fetcher: object, **kwargs: object) -> None:
+    try:
+        jobs.extend(fetcher(**kwargs))  # type: ignore[operator]
+    except Exception as exc:
+        print(f"{source} source failed and was skipped: {type(exc).__name__}: {exc}")
+        jobs.append(_source_error_job(source, exc))
+
+
+def _mark_processing_error(job: dict[str, str], message: str, exc: Exception) -> None:
+    job["status"] = "processing_error"
+    job["shortlisted"] = "no"
+    job["fit_score"] = job.get("fit_score", "")
+    job["risks"] = _append_note(job.get("risks", ""), f"{message}: {type(exc).__name__}: {exc}")
+    job["stage_two_reason"] = _append_note(job.get("stage_two_reason", ""), message)
+
+
+def _source_error_job(source: str, exc: Exception) -> dict[str, str]:
+    return {
+        "job_id": f"source-error-{source}-{abs(hash(str(exc))) % 100000}",
+        "title": "Source fetch failed",
+        "company": "",
+        "location": "",
+        "remote": "",
+        "salary": "",
+        "url": "",
+        "date_posted": "",
+        "source": "error",
+        "status": "source_error",
+        "raw_description": f"{source}: {type(exc).__name__}: {exc}",
+    }
 
 
 def _apply_verification(job: dict[str, str], verification: object) -> None:
