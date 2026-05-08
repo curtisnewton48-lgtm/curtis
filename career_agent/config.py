@@ -14,6 +14,8 @@ class Config:
     model_provider: str
     model_name: str
     stage_two_model_name: str
+    micro_agent_model_provider: str
+    micro_agent_model_name: str
     verification_model_provider: str
     verification_model_name: str
     max_jobs_per_run: int
@@ -55,6 +57,8 @@ def load_config() -> Config:
         model_provider=provider,
         model_name=os.getenv("MODEL_NAME", default_model).strip(),
         stage_two_model_name=os.getenv("STAGE_TWO_MODEL_NAME", "gemini-3.1-pro-preview").strip(),
+        micro_agent_model_provider=os.getenv("MICRO_AGENT_MODEL_PROVIDER", "mistral").strip().lower(),
+        micro_agent_model_name=os.getenv("MICRO_AGENT_MODEL_NAME", "ministral-8b-2512").strip(),
         verification_model_provider=os.getenv("VERIFICATION_MODEL_PROVIDER", "mistral").strip().lower(),
         verification_model_name=os.getenv("VERIFICATION_MODEL_NAME", "ministral-8b-2512").strip(),
         max_jobs_per_run=int(os.getenv("MAX_JOBS_PER_RUN", "20")),
