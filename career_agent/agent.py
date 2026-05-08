@@ -49,10 +49,15 @@ class CareerSearchAgent:
                 "monthly_remaining": 0,
             }
 
-        discovered = self._discover(companies)
-        fresh_jobs = _select_diverse_fresh_jobs(discovered, existing_ids, run_limit)
+        retry_jobs = self.store.stage_two_retry_jobs(run_limit)
+        for retry_job in retry_jobs:
+            self._run_stage_two(profile, retry_job, firm_research_memory)
+            retry_job["status"] = "shortlisted" if retry_job.get("research_doc_url") else "processing_error"
 
-        scored = []
+        discovered = self._discover(companies)
+        fresh_jobs = _select_diverse_fresh_jobs(discovered, existing_ids, max(0, run_limit - len(retry_jobs)))
+
+        scored = list(retry_jobs)
         for job in fresh_jobs:
             try:
                 fit = self.model.score_job(profile, job)
@@ -89,27 +94,8 @@ class CareerSearchAgent:
                     if not verification.accept_for_stage_two:
                         job["shortlisted"] = "no"
 
-            if job["shortlisted"] == "yes" and self.docs:
-                firm_key = normalize_company_name(job.get("company", ""))
-                existing_research_url = firm_research_memory.get(firm_key)
-                if existing_research_url:
-                    job["research_doc_url"] = existing_research_url
-                    job["risks"] = _append_note(
-                        job.get("risks", ""),
-                        "Firm research memory: reused existing research document.",
-                    )
-                else:
-                    try:
-                        research = self.stage_two_model.deep_research(profile, job)
-                        job["research_doc_url"] = self.docs.create_research_doc(
-                            research.title,
-                            research.content,
-                        )
-                    except Exception as exc:
-                        _mark_processing_error(job, "Stage 2 research failed", exc)
-                    else:
-                        if firm_key and job["research_doc_url"]:
-                            firm_research_memory[firm_key] = job["research_doc_url"]
+            if job["shortlisted"] == "yes":
+                self._run_stage_two(profile, job, firm_research_memory)
 
             job.update(
                 {
@@ -130,6 +116,7 @@ class CareerSearchAgent:
             "jobs_discovered": len(discovered),
             "new_jobs_scored": len(scored),
             "shortlisted_for_stage_two": sum(1 for job in scored if job.get("shortlisted") == "yes"),
+            "stage_two_retries": len(retry_jobs),
             "monthly_remaining": max(0, monthly_remaining - len(scored)),
             "reed_discovered": _count_source(discovered, "reed"),
             "brave_discovered": _count_source(discovered, "brave_search"),
@@ -216,6 +203,35 @@ class CareerSearchAgent:
         description = (job.get("raw_description") or "").lower()
         haystack = " ".join([practice_area, summary, description])
         return any(area in haystack for area in self.config.shortlist_practice_areas)
+
+    def _run_stage_two(
+        self,
+        profile: dict[str, str],
+        job: dict[str, str],
+        firm_research_memory: dict[str, str],
+    ) -> None:
+        if not self.docs:
+            return
+        firm_key = normalize_company_name(job.get("company", ""))
+        existing_research_url = firm_research_memory.get(firm_key)
+        if existing_research_url:
+            job["research_doc_url"] = existing_research_url
+            job["risks"] = _append_note(
+                job.get("risks", ""),
+                "Firm research memory: reused existing research document.",
+            )
+            return
+        try:
+            research = self.stage_two_model.deep_research(profile, job)
+            job["research_doc_url"] = self.docs.create_research_doc(
+                research.title,
+                research.content,
+            )
+        except Exception as exc:
+            _mark_processing_error(job, "Stage 2 research failed", exc)
+        else:
+            if firm_key and job["research_doc_url"]:
+                firm_research_memory[firm_key] = job["research_doc_url"]
 
 
 _STAGE_TWO_ROLE_LEVELS = {
