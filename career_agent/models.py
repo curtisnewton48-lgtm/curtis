@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from typing import Any
 from typing import Protocol
 
 import httpx
@@ -189,7 +190,7 @@ class OpenAIModelClient:
         response.raise_for_status()
         payload = response.json()
         output_text = payload.get("output_text") or _extract_openai_output_text(payload)
-        return JobVerification.model_validate_json(output_text)
+        return _validate_job_verification(output_text)
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         response = httpx.post(
@@ -256,7 +257,7 @@ class MistralModelClient:
         content = response.json()["choices"][0]["message"]["content"]
         if not isinstance(content, str):
             content = json.dumps(content, ensure_ascii=True)
-        return JobVerification.model_validate_json(content)
+        return _validate_job_verification(content)
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         response = httpx.post(
@@ -292,7 +293,7 @@ class GeminiModelClient:
 
     def verify_job(self, profile: dict[str, str], job: dict[str, str]) -> JobVerification:
         content = self._generate_json(VERIFICATION_PROMPT, build_user_prompt(profile, job))
-        return JobVerification.model_validate_json(_json_object_text(content))
+        return _validate_job_verification(content)
 
     def deep_research(self, profile: dict[str, str], job: dict[str, str]) -> FirmResearch:
         content = self._generate_json(STAGE_TWO_PROMPT, build_user_prompt(profile, job))
@@ -355,3 +356,47 @@ def _json_object_text(value: str) -> str:
     if start == -1 or end == -1 or end <= start:
         return value
     return text[start : end + 1]
+
+
+def _validate_job_verification(value: str) -> JobVerification:
+    text = _json_object_text(value)
+    payload = json.loads(text)
+    if not isinstance(payload, dict):
+        raise ValueError("Verification response must be a JSON object.")
+    return JobVerification.model_validate(_normalise_verification_payload(payload))
+
+
+def _normalise_verification_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    normalised = dict(payload)
+    normalised["confidence"] = _normalise_confidence(normalised.get("confidence", 0))
+    for key in (
+        "corrected_deadline",
+        "corrected_location",
+        "corrected_salary_or_experience",
+        "evidence",
+        "risks",
+    ):
+        normalised[key] = _normalise_text(normalised.get(key, "not stated"))
+    return normalised
+
+
+def _normalise_confidence(value: object) -> int:
+    if isinstance(value, float) and 0 <= value <= 1:
+        return round(value * 100)
+    if isinstance(value, (float, int)):
+        return round(value)
+    if isinstance(value, str):
+        try:
+            parsed = float(value.strip().rstrip("%"))
+        except ValueError:
+            return 0
+        return round(parsed * 100) if 0 <= parsed <= 1 else round(parsed)
+    return 0
+
+
+def _normalise_text(value: object) -> str:
+    if value is None:
+        return "not stated"
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=True)
