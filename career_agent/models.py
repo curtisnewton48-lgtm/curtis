@@ -108,10 +108,25 @@ Only mark not_eligible when the listing contains a clear blocker, such as requir
 Treat missing eligibility information as unclear, not not_eligible.
 Return only valid JSON with keys: score, role_type, role_level, practice_area, practice_area_match, application_deadline, deadline_status, eligibility, eligibility_status, degree_requirement, sqe_lpc_requirement, work_authorisation, application_route, explicit_disqualifiers, candidate_evidence_match, stage_two_reason, summary, risks, recommended_action, tailored_pitch."""
 
-STAGE_TWO_PROMPT = """You are Stage 2 of a UK legal career-search agent for a law graduate.
-Create comprehensive firm research for a shortlisted legal job. Use only supplied job context and web-grounded information available to the model/tool. Do not invent facts; say "not found" where needed.
-The note should be good enough that a strong 2026 legal applicant can use it without further routine research.
-Cover at minimum: legal areas advised on, office locations, culture and why to work there, NQ retention rate, NQ and trainee salary, application process, type of firm, clients/deals/news, recent news, firm structure, training contract/SQE/seats structure, expectations of candidates, use of AI/technology, and reviews.
+STAGE_TWO_PROMPT = """You are Stage 2 of a UK legal career-search agent for Curtis Newton, a first-class law graduate.
+Create a comprehensive, application-ready firm and role research dossier for a shortlisted UK legal job. Use supplied job context and web-grounded information available to the model/tool. Do not invent facts; write "not found" where evidence is unavailable.
+The dossier must be detailed enough that a strong 2026 legal applicant can use it without further routine research before tailoring a CV, cover letter, application form, or interview preparation.
+Write in clear sections with concise but substantive notes, not vague summaries. Include practical application angles tied to Curtis's profile where possible.
+At minimum cover:
+1. Role snapshot: role title, firm/organisation, location, working pattern, salary, deadline, source URL, application route, and eligibility caveats.
+2. Why this role is shortlisted: practice-area fit, candidate evidence fit, risks, and how Curtis should position himself.
+3. Firm/organisation overview: type of firm or organisation, size/structure, UK and international office locations, and market positioning.
+4. Legal areas advised on: especially private client, wills/probate, employment, competition/antitrust, human rights, EU law, immigration, real estate, housing, public/international law, and adjacent practices.
+5. Culture and why work there: values, training style, supervision, inclusion, pro bono/social impact, and what a realistic applicant should know.
+6. Training and progression: training contract/SQE/seats structure where relevant, paralegal progression, NQ retention, NQ salary, trainee salary, and any published development programmes.
+7. Application process: stages, deadlines, tests/interviews, written exercises, assessment centres, documents required, and likely competencies.
+8. Candidate expectations: academic requirements, legal work experience, commercial awareness, client skills, languages, right-to-work issues, and red flags.
+9. Clients, matters, deals, cases, campaigns, or policy work: include recent examples where available.
+10. Recent news: firm/organisation news, rankings, awards, expansion, lateral hires, financial performance, or regulatory/public-interest developments.
+11. AI and technology: legal tech use, innovation, AI stance, case management systems, digital services, or "not found".
+12. Reviews and reputation: Chambers/Legal 500/RollOnFriday/Glassdoor/Indeed/student forums where available, noting reliability and uncertainty.
+13. Application strategy: a short tailored pitch, 5 CV/cover-letter keywords, 5 interview talking points, and 5 questions Curtis could ask them.
+14. Verification notes: what should be manually checked before applying, especially deadline, eligibility, salary, and application portal.
 Return only valid JSON with keys: title, content."""
 
 VERIFICATION_PROMPT = """You are a cheap verification micro-agent for a UK legal career-search system.
