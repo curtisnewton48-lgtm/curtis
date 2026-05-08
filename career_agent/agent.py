@@ -25,6 +25,7 @@ class CareerSearchAgent:
         stage_two_model: ModelClient | None = None,
         docs: DocsStore | None = None,
         verification_model: ModelClient | None = None,
+        micro_agent_model: ModelClient | None = None,
     ) -> None:
         self.config = config
         self.store = store
@@ -32,6 +33,7 @@ class CareerSearchAgent:
         self.stage_two_model = stage_two_model or model
         self.docs = docs
         self.verification_model = verification_model or model
+        self.micro_agent_model = micro_agent_model or model
 
     def run(self) -> dict[str, int]:
         profile = self.store.profile()
@@ -52,6 +54,7 @@ class CareerSearchAgent:
         retry_jobs = self.store.stage_two_retry_jobs(run_limit)
         for retry_job in retry_jobs:
             self._run_stage_two(profile, retry_job, firm_research_memory)
+            self._run_cv_tailoring(profile, retry_job)
             retry_job["status"] = "shortlisted" if retry_job.get("research_doc_url") else "processing_error"
 
         discovered = self._discover(companies)
@@ -96,6 +99,7 @@ class CareerSearchAgent:
 
             if job["shortlisted"] == "yes":
                 self._run_stage_two(profile, job, firm_research_memory)
+                self._run_cv_tailoring(profile, job)
 
             job.update(
                 {
@@ -110,6 +114,12 @@ class CareerSearchAgent:
             )
             scored.append(job)
 
+        shortlisted_jobs = [job for job in scored if job.get("shortlisted") == "yes"]
+        star_bank_url = self._refresh_star_bank(profile, shortlisted_jobs)
+        if star_bank_url:
+            for job in shortlisted_jobs:
+                job["star_bank_url"] = star_bank_url
+
         self.store.append_jobs(scored)
         return {
             "companies_checked": len(companies),
@@ -117,6 +127,8 @@ class CareerSearchAgent:
             "new_jobs_scored": len(scored),
             "shortlisted_for_stage_two": sum(1 for job in scored if job.get("shortlisted") == "yes"),
             "stage_two_retries": len(retry_jobs),
+            "tailored_cvs_created": sum(1 for job in scored if job.get("cv_doc_url")),
+            "star_bank_refreshed": 1 if star_bank_url else 0,
             "monthly_remaining": max(0, monthly_remaining - len(scored)),
             "reed_discovered": _count_source(discovered, "reed"),
             "brave_discovered": _count_source(discovered, "brave_search"),
@@ -232,6 +244,43 @@ class CareerSearchAgent:
         else:
             if firm_key and job["research_doc_url"]:
                 firm_research_memory[firm_key] = job["research_doc_url"]
+
+    def _run_cv_tailoring(self, profile: dict[str, str], job: dict[str, str]) -> None:
+        if not self.docs or not self.micro_agent_model:
+            return
+        try:
+            tailored_cv = self.micro_agent_model.tailor_cv(profile, job)
+            content = tailored_cv.content
+            if tailored_cv.ats_keywords:
+                content = (
+                    "ATS keyword bank\n"
+                    + ", ".join(tailored_cv.ats_keywords)
+                    + "\n\n"
+                    + content
+                )
+            job["cv_doc_url"] = self.docs.create_support_doc(tailored_cv.title, content)
+        except Exception as exc:
+            job["risks"] = _append_note(
+                job.get("risks", ""),
+                f"CV tailoring micro-agent failed: {type(exc).__name__}: {exc}",
+            )
+
+    def _refresh_star_bank(self, profile: dict[str, str], shortlisted_jobs: list[dict[str, str]]) -> str:
+        if not shortlisted_jobs or not self.docs or not self.micro_agent_model:
+            return ""
+        existing_url = self.store.current_week_star_bank_url()
+        if existing_url:
+            return existing_url
+        try:
+            star_bank = self.micro_agent_model.generate_star_bank(profile, shortlisted_jobs)
+            return self.docs.create_support_doc(star_bank.title, star_bank.content)
+        except Exception as exc:
+            for job in shortlisted_jobs:
+                job["risks"] = _append_note(
+                    job.get("risks", ""),
+                    f"STAR-bank generator failed: {type(exc).__name__}: {exc}",
+                )
+            return ""
 
 
 _STAGE_TWO_ROLE_LEVELS = {
