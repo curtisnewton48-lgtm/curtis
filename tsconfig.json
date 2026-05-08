@@ -9,5 +9,5 @@
     "skipLibCheck": true,
     "lib": ["ES2022", "DOM"]
   },
-  "include": ["agents/**/*.ts", "clients/**/*.ts", "config/**/*.json", "schemas/**/*.ts", "tests/**/*.ts", "orchestrator.ts", "types.ts"]
+  "include": ["agents/**/*.ts", "clients/**/*.ts", "config/**/*.json", "prompts/**/*.ts", "schemas/**/*.ts", "tests/**/*.ts", "orchestrator.ts", "types.ts"]
 }
