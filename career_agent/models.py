@@ -124,6 +124,8 @@ Check:
 - Does the firm or organisation actually exist based on the supplied context?
 - Is the job still open, or is there strong evidence it has closed/expired?
 Set accept_for_stage_two to false if the role is likely fake, closed, an article, a non-vacancy page, has a clearly expired deadline, or has a major factual contradiction.
+Do not treat a fixed-term contract end date as an application deadline or proof that the job is closed. If a date is clearly a contract end date, set deadline_correct=false only if the supplied application_deadline mislabeled it, keep job_still_open=true unless the vacancy page says applications are closed, and explain the correction in risks.
+Do not reject a role merely because it is home-based, remote, hybrid, or has a broader location than the tracker extracted. Correct the location and keep accept_for_stage_two true unless the location creates a clear eligibility or commute barrier.
 When the evidence is incomplete but not contradicted, keep the relevant correctness field true and explain uncertainty in risks.
 Return only valid JSON with keys: is_real_job, deadline_correct, location_correct, salary_experience_accurate, firm_exists, job_still_open, accept_for_stage_two, confidence, corrected_deadline, corrected_location, corrected_salary_or_experience, evidence, risks."""
 
