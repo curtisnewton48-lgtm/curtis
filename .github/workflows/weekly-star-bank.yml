@@ -1,0 +1,34 @@
+name: Weekly STAR Bank Agent
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 8 * * 1"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Generate weekly STAR bank
+        env:
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
+          GOOGLE_RESEARCH_DOC_ID: ${{ secrets.GOOGLE_RESEARCH_DOC_ID }}
+          GOOGLE_RESEARCH_FOLDER_ID: ${{ secrets.GOOGLE_RESEARCH_FOLDER_ID }}
+          PROFILE_CONTEXT: ${{ secrets.PROFILE_CONTEXT }}
+          MICRO_AGENT_MODEL_PROVIDER: ${{ secrets.MICRO_AGENT_MODEL_PROVIDER || 'mistral' }}
+          MICRO_AGENT_MODEL_NAME: ${{ secrets.MICRO_AGENT_MODEL_NAME || 'ministral-8b-2512' }}
+          MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: python -m career_agent.star_bank
