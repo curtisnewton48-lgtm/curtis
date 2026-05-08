@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Stage2Dossier",
+  "type": "object",
+  "required": [
+    "job_id",
+    "firm_name",
+    "role_title",
+    "culture",
+    "values",
+    "training",
+    "recruitment",
+    "commercial_awareness",
+    "practice_areas",
+    "clients",
+    "risks",
+    "application_strategy",
+    "interview_strategy",
+    "competency_mapping",
+    "tone_guidance"
+  ],
+  "properties": {
+    "job_id": { "type": "string" },
+    "firm_name": { "type": "string" },
+    "role_title": { "type": "string" },
+    "culture": { "type": "string" },
+    "values": { "type": "string" },
+    "training": { "type": "string" },
+    "recruitment": { "type": "string" },
+    "commercial_awareness": { "type": "string" },
+    "practice_areas": { "type": "string" },
+    "clients": { "type": "string" },
+    "risks": { "type": "string" },
+    "application_strategy": { "type": "string" },
+    "interview_strategy": { "type": "string" },
+    "competency_mapping": { "type": "string" },
+    "tone_guidance": { "type": "string" }
+  }
+}
