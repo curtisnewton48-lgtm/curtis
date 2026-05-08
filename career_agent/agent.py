@@ -114,12 +114,6 @@ class CareerSearchAgent:
             )
             scored.append(job)
 
-        shortlisted_jobs = [job for job in scored if job.get("shortlisted") == "yes"]
-        star_bank_url = self._refresh_star_bank(profile, shortlisted_jobs)
-        if star_bank_url:
-            for job in shortlisted_jobs:
-                job["star_bank_url"] = star_bank_url
-
         self.store.append_jobs(scored)
         return {
             "companies_checked": len(companies),
@@ -128,7 +122,6 @@ class CareerSearchAgent:
             "shortlisted_for_stage_two": sum(1 for job in scored if job.get("shortlisted") == "yes"),
             "stage_two_retries": len(retry_jobs),
             "tailored_cvs_created": sum(1 for job in scored if job.get("cv_doc_url")),
-            "star_bank_refreshed": 1 if star_bank_url else 0,
             "monthly_remaining": max(0, monthly_remaining - len(scored)),
             "reed_discovered": _count_source(discovered, "reed"),
             "brave_discovered": _count_source(discovered, "brave_search"),
@@ -264,24 +257,6 @@ class CareerSearchAgent:
                 job.get("risks", ""),
                 f"CV tailoring micro-agent failed: {type(exc).__name__}: {exc}",
             )
-
-    def _refresh_star_bank(self, profile: dict[str, str], shortlisted_jobs: list[dict[str, str]]) -> str:
-        if not shortlisted_jobs or not self.docs or not self.micro_agent_model:
-            return ""
-        existing_url = self.store.current_week_star_bank_url()
-        if existing_url:
-            return existing_url
-        try:
-            star_bank = self.micro_agent_model.generate_star_bank(profile, shortlisted_jobs)
-            return self.docs.create_support_doc(star_bank.title, star_bank.content)
-        except Exception as exc:
-            for job in shortlisted_jobs:
-                job["risks"] = _append_note(
-                    job.get("risks", ""),
-                    f"STAR-bank generator failed: {type(exc).__name__}: {exc}",
-                )
-            return ""
-
 
 _STAGE_TWO_ROLE_LEVELS = {
     "paralegal",
