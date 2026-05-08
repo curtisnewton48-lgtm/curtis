@@ -31,3 +31,40 @@ export interface VerifiedJob extends Stage1Job {
   verification: VerificationResult;
   is_valid: boolean;
 }
+
+export interface PortalQuestion {
+  question: string;
+}
+
+export interface PortalAnswer {
+  question: string;
+  answer: string;
+  word_count: number;
+  competency: string;
+  star_source: string;
+  notes: string;
+}
+
+export interface PortalAnswers {
+  answers: PortalAnswer[];
+}
+
+export interface Stage2Dossier {
+  culture?: unknown;
+  competencies?: unknown;
+  application_strategy?: unknown;
+  [key: string]: unknown;
+}
+
+export interface StarBank {
+  stars?: unknown;
+  content?: unknown;
+  [key: string]: unknown;
+}
+
+export interface MasterCV {
+  experience?: unknown;
+  education?: unknown;
+  skills?: unknown;
+  [key: string]: unknown;
+}
