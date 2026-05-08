@@ -20,6 +20,8 @@ def main() -> None:
 
     provider = os.getenv("STAR_BANK_MODEL_PROVIDER", config.micro_agent_model_provider).strip().lower()
     model_name = os.getenv("STAR_BANK_MODEL_NAME", config.micro_agent_model_name).strip()
+    if provider == "mistral" and model_name.startswith("ministral-"):
+        model_name = os.getenv("STAR_BANK_FALLBACK_MODEL_NAME", "mistral-small-latest").strip()
     model = create_model_client(provider, model_name)
     star_bank = model.generate_star_bank(store.profile(), [])
     url = docs.create_support_doc(star_bank.title, star_bank.content)
