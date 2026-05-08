@@ -23,6 +23,9 @@ class FakeStore:
     def current_month_job_count(self) -> int:
         return 0
 
+    def stage_two_retry_jobs(self, limit: int) -> list[dict[str, str]]:
+        return []
+
     def append_jobs(self, jobs: list[dict[str, str]]) -> None:
         self.appended_jobs = jobs
 
