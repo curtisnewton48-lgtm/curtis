@@ -1,4 +1,5 @@
 {
   "portal_agent": "deepseek-v4-pro",
+  "stage1": "gemini-3.0-flash",
   "stage2": "gemini-3.1-pro"
 }
