@@ -1,6 +1,6 @@
 # Career Search Agent
 
-A scheduled cloud agent that runs from GitHub Actions every morning at 09:00 GMT. Stage 1 uses Gemini 3 Flash plus multiple job sources to find UK legal-sector opportunities, extract deadlines and requirements, and write them to Google Sheets. Shortlisted jobs then move to Stage 2, which creates one comprehensive Google Doc research file per firm/job.
+A scheduled cloud agent that runs from GitHub Actions every morning at 09:00 GMT. Stage 1 uses Gemini 3 Flash plus multiple job sources to find UK legal-sector opportunities, extract deadlines and requirements, and write them to Google Sheets. Shortlisted jobs then move to Stage 2, which uses Gemini 3.1 Pro to create one comprehensive Google Doc research file per firm/job.
 
 Tracker created in your Google Drive:
 
@@ -22,7 +22,10 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 - Shortlists active jobs in target practice areas.
 - Runs a cheap Mistral/Ministral verification micro-agent before Stage 2 accepts a job.
 - Reuses existing firm research docs when a later shortlisted job is from the same firm.
-- Creates one comprehensive Google Doc per shortlisted firm/job for Stage 2 deep research.
+- Creates a comprehensive Stage 2 research tab/doc per shortlisted firm/job using Gemini 3.1 Pro.
+- Runs a Mistral/Ministral CV-tailoring micro-agent for shortlisted jobs and links the tailored CV in the tracker.
+- Runs a DeepSeek portal-answer agent for shortlisted jobs and links the answer pack in the tracker.
+- Separately runs a weekly Mistral/Ministral STAR-bank micro-agent that builds a reusable Curtis-specific interview answer library in Drive.
 - Leaves applications and outbound messages under human approval.
 
 ## Limits
@@ -46,7 +49,10 @@ https://docs.google.com/document/d/1vqIEkoUoNTlbNAO-jvxWqkxDeiUrzpfeexIJwiUE8vQ/
 
 ## GitHub Deployment
 
-This repo includes `.github/workflows/daily-career-agent.yml`, which runs the agent once per day.
+This repo includes two GitHub Actions workflows:
+
+- `.github/workflows/daily-career-agent.yml`: runs job discovery, scoring, verification, Stage 2 research, and shortlisted-job CV tailoring once per day.
+- `.github/workflows/weekly-star-bank.yml`: runs the independent STAR-bank generator once per week.
 
 Add these GitHub repository secrets:
 
@@ -56,8 +62,17 @@ Add these GitHub repository secrets:
 - `PROFILE_CONTEXT`
 - `MODEL_PROVIDER`
 - `MODEL_NAME`
+- `STAGE_TWO_MODEL_PROVIDER`
+- `STAGE_TWO_MODEL_NAME`
+- `MICRO_AGENT_MODEL_PROVIDER`
+- `MICRO_AGENT_MODEL_NAME`
+- `PORTAL_ANSWER_MODEL_PROVIDER`
+- `PORTAL_ANSWER_MODEL_NAME`
+- `VERIFICATION_MODEL_PROVIDER`
+- `VERIFICATION_MODEL_NAME`
 - `GEMINI_API_KEY`
 - `MISTRAL_API_KEY`
+- `DEEPSEEK_API_KEY`
 - `ADZUNA_APP_ID`
 - `ADZUNA_APP_KEY`
 - `REED_API_KEY`
@@ -70,9 +85,14 @@ Recommended defaults:
 ```text
 MODEL_PROVIDER=gemini
 MODEL_NAME=gemini-3-flash-preview
+STAGE_TWO_MODEL_PROVIDER=gemini
 STAGE_TWO_MODEL_NAME=gemini-3.1-pro-preview
 VERIFICATION_MODEL_PROVIDER=mistral
 VERIFICATION_MODEL_NAME=ministral-8b-2512
+MICRO_AGENT_MODEL_PROVIDER=mistral
+MICRO_AGENT_MODEL_NAME=ministral-8b-2512
+PORTAL_ANSWER_MODEL_PROVIDER=deepseek
+PORTAL_ANSWER_MODEL_NAME=deepseek-chat
 GOOGLE_SHEET_ID=1LllF4mn8sg1CtsTwmJ9Tbmw0ABg2bPflYilpMbsmz2c
 MAX_JOBS_PER_RUN=20
 MAX_JOBS_PER_MONTH=300
@@ -122,7 +142,7 @@ private client, wills, employment, antitrust, competition law, human rights, eu 
 
 Before Stage 2 research starts, the verification micro-agent checks whether the job appears real, whether the firm exists, whether the role is still open, and whether deadline, location, salary, and experience facts are accurate or at least not contradicted by the source text. Jobs blocked by verification stay in the tracker, but do not receive expensive Stage 2 research.
 
-Each shortlisted job gets an individual Google Doc covering:
+Each shortlisted job gets an individual Google Docs tab or document covering:
 
 - legal areas the firm advises on
 - office locations
@@ -140,6 +160,32 @@ Each shortlisted job gets an individual Google Doc covering:
 
 If the tracker already contains a research document for the same firm, the agent reuses that document link instead of spending Stage 2 tokens on duplicate firm research. The row's `Risks` field notes when firm memory was reused.
 
+## Application Micro-Agents
+
+For shortlisted jobs, the daily system also runs low-cost micro-agents:
+
+- `CV Tailoring Agent`: extracts ATS keywords, rewrites honest CV bullets from Curtis's profile context, generates a tailored UK legal graduate CV draft, stores it in Drive, and writes the link to the tracker.
+- `Portal Answer Agent`: uses DeepSeek to draft truthful application-portal answers, stores the answer pack in Drive, and writes the link to the tracker.
+This agent does not invent experience. Where the profile lacks evidence, it uses bracketed prompts for Curtis to fill with real examples.
+
+## Weekly STAR-Bank Agent
+
+The STAR-bank generator is independent from Stage 1, Stage 2, and shortlisting. It is Curtis-specific, not job-specific. It runs weekly from `.github/workflows/weekly-star-bank.yml`, reads the `Profile` tab plus `PROFILE_CONTEXT`, and stores a reusable Google Doc in Drive.
+
+It generates 20-40 competency answers across universal legal-application themes:
+
+- teamwork
+- client care
+- attention to detail
+- legal research
+- commercial awareness
+- communication
+- working under pressure
+- conflict resolution
+- organisation/time management
+
+It also adds extra answers where evidence supports them, such as leadership, resilience, ethics, confidentiality, technology/AI, initiative, empathy, and motivation for law.
+
 ## Sheet Setup
 
 Fill in:
@@ -148,7 +194,7 @@ Fill in:
 - `TargetCompanies`: optional firm names and careers URLs for extra direct-source checks.
 - `Settings`: model provider, model name, max jobs per run, monthly cap, and shortlist settings.
 
-The agent writes to `Jobs`, including role title, application deadline, deadline status, eligibility, salary, location, practice-area clues, role type, fit score, risks, tailored pitch, shortlist status, and the Stage 2 research Doc URL.
+The agent writes to `Jobs`, including role title, application deadline, deadline status, eligibility, salary, location, practice-area clues, role type, fit score, risks, tailored pitch, shortlist status, Stage 2 research Doc URL, tailored CV URL, portal-answer pack URL, and timestamps.
 
 ## Safety
 
