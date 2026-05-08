@@ -295,6 +295,14 @@ def _source_error_job(source: str, exc: Exception) -> dict[str, str]:
 
 
 def _apply_verification(job: dict[str, str], verification: object) -> None:
+    if _should_override_verification_block(job, verification):
+        verification.accept_for_stage_two = True
+        verification.job_still_open = True
+        verification.risks = _append_note(
+            getattr(verification, "risks", ""),
+            "System override: fixed-term contract end date or remote/location correction is not treated as a closed-job blocker.",
+        )
+
     if _use_corrected_value(getattr(verification, "corrected_deadline", "")):
         job["application_deadline"] = getattr(verification, "corrected_deadline")
     if _use_corrected_value(getattr(verification, "corrected_location", "")):
@@ -326,6 +334,50 @@ def _apply_verification(job: dict[str, str], verification: object) -> None:
 def _use_corrected_value(value: str) -> bool:
     cleaned = (value or "").strip()
     return bool(cleaned and cleaned.lower() not in {"not stated", "unclear", "n/a", "none"})
+
+
+def _should_override_verification_block(job: dict[str, str], verification: object) -> bool:
+    if getattr(verification, "accept_for_stage_two", True):
+        return False
+    evidence = _verification_text(verification)
+    job_text = " ".join(
+        [
+            job.get("title", ""),
+            job.get("location", ""),
+            job.get("raw_description", ""),
+            job.get("fit_summary", ""),
+        ]
+    ).lower()
+    date_is_contract_end = any(
+        term in evidence or term in job_text
+        for term in {
+            "fixed-term",
+            "fixed term",
+            "contract end",
+            "contract end date",
+            "ftc",
+            "until 31/03/2027",
+            "until 31 march 2027",
+        }
+    )
+    location_is_remote_correction = any(
+        term in evidence or term in job_text
+        for term in {"home-based", "home based", "remote", "hybrid"}
+    )
+    real_job = bool(getattr(verification, "is_real_job", False))
+    firm_exists = bool(getattr(verification, "firm_exists", False))
+    return real_job and firm_exists and (date_is_contract_end or location_is_remote_correction)
+
+
+def _verification_text(verification: object) -> str:
+    return " ".join(
+        [
+            str(getattr(verification, "evidence", "")),
+            str(getattr(verification, "risks", "")),
+            str(getattr(verification, "corrected_deadline", "")),
+            str(getattr(verification, "corrected_location", "")),
+        ]
+    ).lower()
 
 
 def _normalise_label(value: str) -> str:
