@@ -175,6 +175,9 @@ class DocsStore:
         ).execute()
 
     def create_research_doc(self, title: str, content: str) -> str:
+        if self.document_id:
+            return self._append_to_master_research_doc(title, content)
+
         metadata: dict[str, Any] = {
             "name": _safe_title(title),
             "mimeType": "application/vnd.google-apps.document",
@@ -197,6 +200,24 @@ class DocsStore:
             },
         ).execute()
         return file.get("webViewLink") or f"https://docs.google.com/document/d/{document_id}/edit"
+
+    def _append_to_master_research_doc(self, title: str, content: str) -> str:
+        document = self.service.documents().get(documentId=self.document_id).execute()
+        end_index = document["body"]["content"][-1]["endIndex"] - 1
+        self.service.documents().batchUpdate(
+            documentId=self.document_id,
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": end_index},
+                            "text": f"\n\n{_safe_title(title)}\n\n{content}",
+                        }
+                    }
+                ]
+            },
+        ).execute()
+        return f"https://docs.google.com/document/d/{self.document_id}/edit"
 
 
 def _research_entry(job: dict[str, Any]) -> str:
