@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 from career_agent.agent import CareerSearchAgent
-from career_agent.models import JobVerification
+from career_agent.models import JobVerification, _validate_job_verification
 
 
 class FakeStore:
@@ -199,6 +199,33 @@ def test_job_verification_accepts_mistral_style_messy_json() -> None:
             "evidence": {"job_exists": {"status": "verified"}},
             "risks": [{"risk": "deadline should be confirmed"}],
         }
+    )
+
+    assert verification.confidence == 95
+    assert verification.corrected_deadline == "not stated"
+    assert "job_exists" in verification.evidence
+    assert "deadline should be confirmed" in verification.risks
+
+
+def test_raw_verification_json_is_normalised_before_validation() -> None:
+    verification = _validate_job_verification(
+        """
+        {
+          "is_real_job": true,
+          "deadline_correct": true,
+          "location_correct": true,
+          "salary_experience_accurate": true,
+          "firm_exists": true,
+          "job_still_open": true,
+          "accept_for_stage_two": true,
+          "confidence": 0.95,
+          "corrected_deadline": null,
+          "corrected_location": "not stated",
+          "corrected_salary_or_experience": "not stated",
+          "evidence": {"job_exists": {"status": "verified"}},
+          "risks": [{"risk": "deadline should be confirmed"}]
+        }
+        """
     )
 
     assert verification.confidence == 95
