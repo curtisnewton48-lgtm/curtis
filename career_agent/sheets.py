@@ -87,9 +87,15 @@ class SheetsStore:
         if limit <= 0:
             return []
         rows = self.values("Jobs!A2:Y5000")
-        jobs_by_id_with_research = {row[0] for row in rows if len(row) > 22 and row[0] and row[22]}
+        jobs_by_id_with_research = {
+            row[0]
+            for row in rows
+            if len(row) > 22 and row[0] and row[22]
+        }
         companies_with_research = {
-            normalize_company_name(row[2]) for row in rows if len(row) > 22 and row[2] and row[22]
+            normalize_company_name(row[2])
+            for row in rows
+            if len(row) > 22 and row[2] and row[22]
         }
         retry_jobs = []
         seen = set()
@@ -103,9 +109,13 @@ class SheetsStore:
             seen.add(job_id)
             if job_id in jobs_by_id_with_research or company_key in companies_with_research:
                 continue
-            if padded[10] != "processing_error" or padded[22]:
+            if padded[10] != "processing_error":
                 continue
-            if "Stage 2 research failed" not in risks or "Verification: accepted=True" not in risks:
+            if padded[22]:
+                continue
+            if "Stage 2 research failed" not in risks:
+                continue
+            if "Verification: accepted=True" not in risks:
                 continue
             retry_jobs.append(
                 {
@@ -141,7 +151,7 @@ class SheetsStore:
 
     def current_month_job_count(self) -> int:
         now = datetime.now(timezone.utc)
-        rows = self.values("Jobs!A2:Z5000")
+        rows = self.values("Jobs!A2:AA5000")
         count = 0
         for row in rows:
             if not row:
@@ -183,6 +193,7 @@ class SheetsStore:
                 job.get("research_doc_url", ""),
                 job.get("raw_description", ""),
                 job.get("cv_doc_url", ""),
+                job.get("portal_answers_doc_url", ""),
                 now,
             ]
             for job in jobs
@@ -192,7 +203,7 @@ class SheetsStore:
             .values()
             .append(
                 spreadsheetId=self.spreadsheet_id,
-                range="Jobs!A:Z",
+                        range="Jobs!A:AA",
                 valueInputOption="USER_ENTERED",
                 insertDataOption="INSERT_ROWS",
                 body={"values": rows},
@@ -219,7 +230,16 @@ class DocsStore:
         end_index = document["body"]["content"][-1]["endIndex"] - 1
         self.service.documents().batchUpdate(
             documentId=self.document_id,
-            body={"requests": [{"insertText": {"location": {"index": end_index}, "text": "\n\n" + text}}]},
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": end_index},
+                            "text": "\n\n" + text,
+                        }
+                    }
+                ]
+            },
         ).execute()
 
     def create_research_doc(self, title: str, content: str) -> str:
@@ -228,7 +248,29 @@ class DocsStore:
                 return self._add_master_research_tab(title, content)
             except Exception:
                 return self._append_to_master_research_doc(title, content)
-        return self._create_drive_doc(title, content)
+
+        metadata: dict[str, Any] = {
+            "name": _safe_title(title),
+            "mimeType": "application/vnd.google-apps.document",
+        }
+        if self.folder_id:
+            metadata["parents"] = [self.folder_id]
+        file = self.drive_service.files().create(body=metadata, fields="id,webViewLink").execute()
+        document_id = file["id"]
+        self.service.documents().batchUpdate(
+            documentId=document_id,
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": 1},
+                            "text": content,
+                        }
+                    }
+                ]
+            },
+        ).execute()
+        return file.get("webViewLink") or f"https://docs.google.com/document/d/{document_id}/edit"
 
     def create_support_doc(self, title: str, content: str) -> str:
         if self.folder_id:
@@ -251,7 +293,16 @@ class DocsStore:
         document_id = file["id"]
         self.service.documents().batchUpdate(
             documentId=document_id,
-            body={"requests": [{"insertText": {"location": {"index": 1}, "text": content}}]},
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": 1},
+                            "text": content,
+                        }
+                    }
+                ]
+            },
         ).execute()
         return file.get("webViewLink") or f"https://docs.google.com/document/d/{document_id}/edit"
 
@@ -260,7 +311,16 @@ class DocsStore:
         end_index = document["body"]["content"][-1]["endIndex"] - 1
         self.service.documents().batchUpdate(
             documentId=self.document_id,
-            body={"requests": [{"insertText": {"location": {"index": end_index}, "text": f"\n\n{_safe_title(title)}\n\n{content}"}}]},
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": end_index},
+                            "text": f"\n\n{_safe_title(title)}\n\n{content}",
+                        }
+                    }
+                ]
+            },
         ).execute()
         return f"https://docs.google.com/document/d/{self.document_id}/edit"
 
@@ -268,7 +328,17 @@ class DocsStore:
         tab_title = _safe_tab_title(title)
         response = self.service.documents().batchUpdate(
             documentId=self.document_id,
-            body={"requests": [{"addDocumentTab": {"tabProperties": {"title": tab_title}}}]},
+            body={
+                "requests": [
+                    {
+                        "addDocumentTab": {
+                            "tabProperties": {
+                                "title": tab_title,
+                            }
+                        }
+                    }
+                ]
+            },
         ).execute()
         tab_id = (
             response.get("replies", [{}])[0]
@@ -280,7 +350,16 @@ class DocsStore:
             raise RuntimeError("Google Docs did not return a tab ID.")
         self.service.documents().batchUpdate(
             documentId=self.document_id,
-            body={"requests": [{"insertText": {"location": {"index": 1, "tabId": tab_id}, "text": f"{tab_title}\n\n{content}"}}]},
+            body={
+                "requests": [
+                    {
+                        "insertText": {
+                            "location": {"index": 1, "tabId": tab_id},
+                            "text": f"{tab_title}\n\n{content}",
+                        }
+                    }
+                ]
+            },
         ).execute()
         return f"https://docs.google.com/document/d/{self.document_id}/edit?tab={tab_id}"
 
